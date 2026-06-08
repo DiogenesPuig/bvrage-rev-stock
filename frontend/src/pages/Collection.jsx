@@ -55,7 +55,7 @@ export default function Collection() {
 
   return (
     <Layout title="Mi colección">
-      <div className="px-4 pt-4 pb-2 space-y-3">
+      <div className="px-4 md:px-8 pt-4 pb-2 space-y-3 max-w-4xl">
         <input
           type="search"
           placeholder="Buscar por nombre o productor..."
@@ -87,12 +87,12 @@ export default function Collection() {
       {!loading && !error && (
         <>
           {beverages.length > 0 && (
-            <p className="px-4 py-2 text-xs text-zinc-600">
+            <p className="px-4 md:px-8 py-2 text-xs text-zinc-600">
               {beverages.length} {beverages.length === 1 ? 'bebida' : 'bebidas'} · {totalBottles} {totalBottles === 1 ? 'botella' : 'botellas'}
             </p>
           )}
 
-          <div>
+          <div className="max-w-4xl md:px-4">
             {beverages.map((b) => (
               <BeverageCard key={b.id} beverage={b} />
             ))}
@@ -111,9 +111,10 @@ export default function Collection() {
         </>
       )}
 
+      {/* FAB: sobre el bottom nav en mobile, esquina inferior derecha en desktop */}
       <button
         onClick={() => setShowForm(true)}
-        className="fixed bottom-20 right-4 w-14 h-14 bg-zinc-100 text-zinc-900 rounded-full shadow-lg flex items-center justify-center text-2xl font-light hover:bg-white transition-colors"
+        className="fixed bottom-20 right-4 md:bottom-8 md:right-8 w-14 h-14 bg-zinc-100 text-zinc-900 rounded-full shadow-lg flex items-center justify-center text-2xl font-light hover:bg-white transition-colors z-20"
         aria-label="Agregar bebida"
       >
         +
