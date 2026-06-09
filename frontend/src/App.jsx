@@ -5,17 +5,19 @@ import Home from './pages/Home'
 import Login from './pages/Login'
 import Register from './pages/Register'
 import Collection from './pages/Collection'
+import BeverageDetail from './pages/BeverageDetail'
 
 function App() {
   return (
     <BrowserRouter>
       <AuthProvider>
         <Routes>
-          <Route path="/"           element={<Home />} />
-          <Route path="/login"      element={<Login />} />
-          <Route path="/register"   element={<Register />} />
-          <Route path="/collection" element={<ProtectedRoute><Collection /></ProtectedRoute>} />
-          <Route path="*"           element={<Navigate to="/" replace />} />
+          <Route path="/"                   element={<Home />} />
+          <Route path="/login"              element={<Login />} />
+          <Route path="/register"           element={<Register />} />
+          <Route path="/collection"         element={<ProtectedRoute><Collection /></ProtectedRoute>} />
+          <Route path="/beverages/:id"      element={<ProtectedRoute><BeverageDetail /></ProtectedRoute>} />
+          <Route path="*"                   element={<Navigate to="/" replace />} />
         </Routes>
       </AuthProvider>
     </BrowserRouter>
