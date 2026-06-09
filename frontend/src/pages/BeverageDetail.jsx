@@ -4,6 +4,7 @@ import Layout from '../components/Layout'
 import BeverageIcon from '../components/BeverageIcon'
 import BeverageForm from '../components/BeverageForm'
 import MovementForm from '../components/MovementForm'
+import ReviewForm from '../components/ReviewForm'
 import { api } from '../services/api'
 
 const MOVEMENT_LABELS = {
@@ -24,6 +25,7 @@ export default function BeverageDetail() {
   const [error,      setError]      = useState('')
   const [showEdit,   setShowEdit]   = useState(false)
   const [showMove,   setShowMove]   = useState(false)
+  const [showReview, setShowReview] = useState(false)
   const [saving,     setSaving]     = useState(false)
   const [confirmDel, setConfirmDel] = useState(false)
 
@@ -68,6 +70,18 @@ export default function BeverageDetail() {
     }
   }
 
+  const handleReview = async (formData) => {
+    setSaving(true)
+    try {
+      await api.post('/reviews', formData)
+      setShowReview(false)
+    } catch (err) {
+      alert(err?.error || 'Error al publicar reseña')
+    } finally {
+      setSaving(false)
+    }
+  }
+
   const handleMovement = async (formData) => {
     setSaving(true)
     try {
@@ -91,7 +105,7 @@ export default function BeverageDetail() {
           className="flex items-center gap-1.5 text-sm text-zinc-500 hover:text-zinc-300 transition-colors mb-5"
         >
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M15 18l-6-6 6-6"/></svg>
-          Colección
+          Mi Bodega
         </button>
 
         {loading && (
@@ -157,12 +171,18 @@ export default function BeverageDetail() {
             </section>
 
             {/* Acciones */}
-            <div className="flex gap-2 mb-8">
+            <div className="flex flex-wrap gap-2 mb-8">
               <button
                 onClick={() => setShowMove(true)}
                 className="flex-1 bg-zinc-100 text-zinc-900 font-medium rounded-lg py-2.5 text-sm hover:bg-white transition-colors"
               >
                 + Movimiento
+              </button>
+              <button
+                onClick={() => setShowReview(true)}
+                className="flex-1 bg-zinc-800 text-zinc-300 rounded-lg py-2.5 text-sm hover:bg-zinc-700 transition-colors"
+              >
+                ★ Reseñar
               </button>
               <button
                 onClick={() => setShowEdit(true)}
@@ -231,6 +251,16 @@ export default function BeverageDetail() {
           initial={beverage}
           onSave={handleEdit}
           onClose={() => setShowEdit(false)}
+          loading={saving}
+        />
+      )}
+
+      {/* Modal reseña */}
+      {showReview && beverage && (
+        <ReviewForm
+          beverageRef={[beverage.name, beverage.producer, beverage.vintage].filter(Boolean).join(' ')}
+          onSave={handleReview}
+          onClose={() => setShowReview(false)}
           loading={saving}
         />
       )}

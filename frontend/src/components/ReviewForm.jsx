@@ -1,7 +1,7 @@
 import { useState } from 'react'
 
-export default function ReviewForm({ onSave, onClose, loading }) {
-  const [form, setForm] = useState({ beverage_ref: '', body: '', rating: '' })
+export default function ReviewForm({ onSave, onClose, loading, beverageRef = '' }) {
+  const [form, setForm] = useState({ beverage_ref: beverageRef, body: '', rating: '' })
   const set = (e) => setForm((f) => ({ ...f, [e.target.name]: e.target.value }))
 
   return (

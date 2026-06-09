@@ -3,7 +3,7 @@ import { useAuth } from '../context/AuthContext'
 
 const navItems = [
   { to: '/',           label: 'Inicio',    icon: HomeIcon },
-  { to: '/collection', label: 'Colección', icon: BottleIcon },
+  { to: '/collection', label: 'Mi Bodega', icon: BottleIcon },
   { to: '/locations',  label: 'Lugares',   icon: LocationIcon },
   { to: '/community',  label: 'Comunidad', icon: StarIcon },
 ]
