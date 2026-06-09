@@ -2,9 +2,10 @@ import { NavLink, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 
 const navItems = [
-  { to: '/',          label: 'Colección', icon: BottleIcon },
-  { to: '/locations', label: 'Lugares',   icon: LocationIcon },
-  { to: '/community', label: 'Comunidad', icon: StarIcon },
+  { to: '/',           label: 'Inicio',    icon: HomeIcon },
+  { to: '/collection', label: 'Colección', icon: BottleIcon },
+  { to: '/locations',  label: 'Lugares',   icon: LocationIcon },
+  { to: '/community',  label: 'Comunidad', icon: StarIcon },
 ]
 
 export default function Layout({ children, title }) {
@@ -100,6 +101,16 @@ export default function Layout({ children, title }) {
         ))}
       </nav>
     </div>
+  )
+}
+
+function HomeIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M3 12L12 3l9 9"/>
+      <path d="M9 21V12h6v9"/>
+      <path d="M3 12v9h18v-9"/>
+    </svg>
   )
 }
 

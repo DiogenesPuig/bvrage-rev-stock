@@ -4,6 +4,32 @@ const { requireAuth } = require('../middleware/auth');
 
 const router = express.Router();
 
+// GET /api/reviews/featured — top bebidas por nro de reseñas, público
+router.get('/featured', async (req, res) => {
+  try {
+    const result = await query(
+      `SELECT
+         beverage_ref,
+         COUNT(*)::int                          AS review_count,
+         ROUND(AVG(rating) FILTER (WHERE rating IS NOT NULL), 1) AS avg_rating,
+         MAX(created_at)                        AS last_reviewed_at,
+         (ARRAY_AGG(body ORDER BY created_at DESC) FILTER (WHERE body IS NOT NULL))[1] AS latest_body,
+         (ARRAY_AGG(u.display_name ORDER BY r.created_at DESC))[1] AS latest_author
+       FROM reviews r
+       JOIN users u ON u.id = r.user_id
+       WHERE r.deleted_at IS NULL
+       GROUP BY beverage_ref
+       ORDER BY review_count DESC, avg_rating DESC NULLS LAST
+       LIMIT 30`,
+      []
+    );
+    res.json(result.rows);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Error del servidor' });
+  }
+});
+
 // GET /api/reviews?q=nombre  — público, sin auth
 router.get('/', async (req, res) => {
   try {
