@@ -15,6 +15,8 @@ export default function Search() {
   const [loading,    setLoading]    = useState({ vivino: false, community: false })
   const [errors,     setErrors]     = useState({ vivino: null, community: null })
   const [searched,   setSearched]   = useState(false)
+  const [importing,  setImporting]  = useState(false)
+  const [importMsg,  setImportMsg]  = useState(null)
 
   const search = async () => {
     if (!query.trim()) return
@@ -34,6 +36,24 @@ export default function Search() {
       .then(data  => setResults(r => ({ ...r, community: data })))
       .catch(()   => setErrors(e  => ({ ...e, community: 'Error al buscar en comunidad' })))
       .finally(() => setLoading(l => ({ ...l, community: false })))
+  }
+
+  const handleImport = async () => {
+    if (!query.trim()) return
+    setImporting(true)
+    setImportMsg(null)
+    try {
+      const data = await api.post('/scraper/import', { q: query.trim(), pages: 3 })
+      setImportMsg(`✓ ${data.imported} nuevos, ${data.updated} actualizados`)
+      // Refrescar tab comunidad para mostrar los recién importados
+      api.get(`/beverages/suggestions?q=${encodeURIComponent(query.trim())}`)
+        .then(d => setResults(r => ({ ...r, community: d })))
+        .catch(() => {})
+    } catch (err) {
+      setImportMsg(`Error: ${err?.error || 'No se pudo importar'}`)
+    } finally {
+      setImporting(false)
+    }
   }
 
   const handleSelect = (item) => {
@@ -65,7 +85,7 @@ export default function Search() {
           <input
             type="search"
             value={query}
-            onChange={e => setQuery(e.target.value)}
+            onChange={e => { setQuery(e.target.value); setImportMsg(null) }}
             onKeyDown={e => e.key === 'Enter' && search()}
             placeholder="Buscar vino, cerveza, destilado..."
             className="flex-1 bg-zinc-900 border border-zinc-800 rounded-xl px-4 py-2.5 text-zinc-100 placeholder-zinc-600 text-sm focus:outline-none focus:border-zinc-700 transition-colors"
@@ -77,6 +97,25 @@ export default function Search() {
           >
             Buscar
           </button>
+        </div>
+
+        {/* Importar al catálogo */}
+        <div className="flex items-center gap-3">
+          <button
+            onClick={handleImport}
+            disabled={!query.trim() || importing}
+            className="flex items-center gap-2 text-sm text-zinc-400 hover:text-zinc-200 disabled:opacity-40 transition-colors"
+          >
+            {importing
+              ? <><Spinner /> Importando...</>
+              : <><DownloadIcon /> Guardar en catálogo (Vivino)</>
+            }
+          </button>
+          {importMsg && (
+            <span className={`text-xs ${importMsg.startsWith('✓') ? 'text-emerald-400' : 'text-red-400'}`}>
+              {importMsg}
+            </span>
+          )}
         </div>
 
         {/* Tabs */}
@@ -133,6 +172,20 @@ export default function Search() {
         )}
       </div>
     </Layout>
+  )
+}
+
+function Spinner() {
+  return <div className="w-4 h-4 border-2 border-zinc-600 border-t-zinc-300 rounded-full animate-spin" />
+}
+
+function DownloadIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+      <polyline points="7 10 12 15 17 10"/>
+      <line x1="12" y1="15" x2="12" y2="3"/>
+    </svg>
   )
 }
 
