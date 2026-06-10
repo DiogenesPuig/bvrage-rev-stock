@@ -5,38 +5,22 @@ const { requireAuth } = require('../middleware/auth');
 const router = express.Router();
 router.use(requireAuth);
 
-// GET /api/beverages/suggestions?q=<query>  — busca en comunidad + catálogo Vivino
+// GET /api/beverages/suggestions?q=<query>  — busca solo en wine_catalog (curado por admin)
 router.get('/suggestions', async (req, res) => {
   const { q } = req.query;
   if (!q || q.trim().length < 2) return res.json([]);
-  const like = `%${q.trim()}%`;
   try {
     const result = await query(
-      `(
-         SELECT DISTINCT ON (lower(trim(name)), lower(trim(COALESCE(producer, ''))))
-           name, producer, type, country, region, grape_variety,
-           alcohol_pct, image_url, external_url,
-           'community' AS source, 0 AS vivino_rating
-         FROM beverages
-         WHERE deleted_at IS NULL AND (name ILIKE $1 OR producer ILIKE $1)
-         ORDER BY lower(trim(name)), lower(trim(COALESCE(producer, ''))), created_at DESC
-         LIMIT 5
-       )
-       UNION ALL
-       (
-         SELECT DISTINCT ON (lower(trim(name)), lower(trim(COALESCE(producer, ''))))
-           name, producer, type, country, region, grape_variety,
-           NULL AS alcohol_pct, image_url, external_url,
-           'catalog' AS source,
-           COALESCE(vivino_rating, 0) AS vivino_rating
-         FROM wine_catalog
-         WHERE name ILIKE $1 OR producer ILIKE $1
-         ORDER BY lower(trim(name)), lower(trim(COALESCE(producer, ''))),
-                  vivino_ratings_count DESC
-         LIMIT 8
-       )
-       LIMIT 12`,
-      [like]
+      `SELECT DISTINCT ON (lower(trim(name)), lower(trim(COALESCE(producer, ''))))
+         name, producer, type, country, region, grape_variety,
+         NULL AS alcohol_pct, image_url, external_url, 'catalog' AS source,
+         vivino_rating
+       FROM wine_catalog
+       WHERE name ILIKE $1 OR producer ILIKE $1
+       ORDER BY lower(trim(name)), lower(trim(COALESCE(producer, ''))),
+                vivino_ratings_count DESC
+       LIMIT 10`,
+      [`%${q.trim()}%`]
     );
     res.json(result.rows);
   } catch (err) {

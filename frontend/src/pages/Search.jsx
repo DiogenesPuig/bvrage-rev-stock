@@ -3,12 +3,14 @@ import { useNavigate } from 'react-router-dom'
 import Layout from '../components/Layout'
 import BeverageIcon from '../components/BeverageIcon'
 import { api } from '../services/api'
+import { useAuth } from '../context/AuthContext'
 
 const TABS = ['vivino', 'community']
 const TAB_LABELS = { vivino: 'Vivino', community: 'Comunidad' }
 
 export default function Search() {
-  const navigate = useNavigate()
+  const navigate    = useNavigate()
+  const { user }    = useAuth()
   const [query,      setQuery]      = useState('')
   const [tab,        setTab]        = useState('vivino')
   const [results,    setResults]    = useState({ vivino: [], community: [] })
@@ -99,8 +101,8 @@ export default function Search() {
           </button>
         </div>
 
-        {/* Importar al catálogo */}
-        <div className="flex items-center gap-3">
+        {/* Importar al catálogo — solo admins */}
+        {user?.is_admin && <div className="flex items-center gap-3">
           <button
             onClick={handleImport}
             disabled={!query.trim() || importing}
@@ -116,7 +118,7 @@ export default function Search() {
               {importMsg}
             </span>
           )}
-        </div>
+        </div>}
 
         {/* Tabs */}
         {searched && (

@@ -5,14 +5,14 @@ const { query } = require('../db');
 
 const router = express.Router();
 
-function generateTokens(userId) {
+function generateTokens(userId, isAdmin = false) {
   const accessToken = jwt.sign(
-    { userId },
+    { userId, isAdmin },
     process.env.JWT_SECRET,
     { expiresIn: '15m' }
   );
   const refreshToken = jwt.sign(
-    { userId },
+    { userId, isAdmin },
     process.env.JWT_REFRESH_SECRET,
     { expiresIn: '7d' }
   );
@@ -40,8 +40,8 @@ router.post('/register', async (req, res) => {
     );
 
     const user = result.rows[0];
-    const tokens = generateTokens(user.id);
-    res.status(201).json({ user, ...tokens });
+    const tokens = generateTokens(user.id, false);
+    res.status(201).json({ user: { ...user, is_admin: false }, ...tokens });
   } catch (err) {
     if (err.code === '23505') {
       return res.status(409).json({ error: 'Ese email ya está registrado' });
@@ -69,9 +69,9 @@ router.post('/login', async (req, res) => {
       return res.status(401).json({ error: 'Credenciales incorrectas' });
     }
 
-    const tokens = generateTokens(user.id);
+    const tokens = generateTokens(user.id, user.is_admin);
     res.json({
-      user: { id: user.id, email: user.email, display_name: user.display_name },
+      user: { id: user.id, email: user.email, display_name: user.display_name, is_admin: user.is_admin },
       ...tokens,
     });
   } catch (err) {

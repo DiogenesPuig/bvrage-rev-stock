@@ -1,7 +1,7 @@
 const express = require('express');
 const axios = require('axios');
 const { query, pool } = require('../db');
-const { requireAuth } = require('../middleware/auth');
+const { requireAuth, requireAdmin } = require('../middleware/auth');
 
 const router = express.Router();
 
@@ -76,8 +76,8 @@ router.post('/search', requireAuth, async (req, res) => {
   }
 });
 
-// POST /api/scraper/import  — precarga Vivino en wine_catalog
-router.post('/import', requireAuth, async (req, res) => {
+// POST /api/scraper/import  — solo admins
+router.post('/import', requireAuth, requireAdmin, async (req, res) => {
   const { q, pages = 1 } = req.body;
   if (!q) return res.status(400).json({ error: 'q es obligatorio' });
 
