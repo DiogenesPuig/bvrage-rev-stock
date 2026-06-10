@@ -1,0 +1,13 @@
+[
+  { "type": "wine",    "query": "malbec argentina",          "pages": 5 },
+  { "type": "wine",    "query": "cabernet sauvignon",        "pages": 3 },
+  { "type": "wine",    "query": "torrontés argentina",       "pages": 2 },
+  { "type": "wine",    "query": "chardonnay",                "pages": 2 },
+  { "type": "beer",    "query": "ipa craft beer" },
+  { "type": "beer",    "query": "stout porter" },
+  { "type": "beer",    "query": "pale ale lager" },
+  { "type": "spirits", "query": "single malt scotch whisky" },
+  { "type": "spirits", "query": "bourbon whiskey" },
+  { "type": "spirits", "query": "gin craft" },
+  { "type": "spirits", "query": "ron rum aged" }
+]

@@ -26,10 +26,13 @@ export default function Collection() {
     () => localStorage.getItem('bodega-view') || 'auto'
   )
 
-  // Recibe datos pre-llenados desde la página de búsqueda
+  // Recibe prefill o apertura directa del form desde búsqueda
   useEffect(() => {
     if (location.state?.prefill) {
       setPrefillData(location.state.prefill)
+      setShowForm(true)
+      navigate('/collection', { replace: true, state: {} })
+    } else if (location.state?.openForm) {
       setShowForm(true)
       navigate('/collection', { replace: true, state: {} })
     }
