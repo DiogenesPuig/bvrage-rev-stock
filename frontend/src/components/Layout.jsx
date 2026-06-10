@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthContext'
 const navItems = [
   { to: '/',           label: 'Inicio',    icon: HomeIcon },
   { to: '/collection', label: 'Mi Bodega', icon: BottleIcon },
+  { to: '/search',     label: 'Buscar',    icon: SearchIcon },
   { to: '/locations',  label: 'Lugares',   icon: LocationIcon },
   { to: '/community',  label: 'Comunidad', icon: StarIcon },
 ]
@@ -101,6 +102,15 @@ export default function Layout({ children, title }) {
         ))}
       </nav>
     </div>
+  )
+}
+
+function SearchIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="11" cy="11" r="7"/>
+      <line x1="16.5" y1="16.5" x2="22" y2="22"/>
+    </svg>
   )
 }
 

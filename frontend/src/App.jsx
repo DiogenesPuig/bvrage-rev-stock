@@ -8,6 +8,7 @@ import Collection from './pages/Collection'
 import BeverageDetail from './pages/BeverageDetail'
 import Locations from './pages/Locations'
 import Community from './pages/Community'
+import Search from './pages/Search'
 
 function App() {
   return (
@@ -21,6 +22,7 @@ function App() {
           <Route path="/beverages/:id" element={<ProtectedRoute><BeverageDetail /></ProtectedRoute>} />
           <Route path="/locations"     element={<ProtectedRoute><Locations /></ProtectedRoute>} />
           <Route path="/community"     element={<ProtectedRoute><Community /></ProtectedRoute>} />
+          <Route path="/search"        element={<ProtectedRoute><Search /></ProtectedRoute>} />
           <Route path="*"              element={<Navigate to="/" replace />} />
         </Routes>
       </AuthProvider>

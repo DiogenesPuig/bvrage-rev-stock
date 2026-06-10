@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
 import Layout from '../components/Layout'
 import BeverageCard from '../components/BeverageCard'
 import BeverageIcon from '../components/BeverageIcon'
@@ -11,16 +11,29 @@ const TYPE_LABELS = { wine: 'Vino', beer: 'Cerveza', spirits: 'Destilado', other
 const GRID_THRESHOLD = 12
 
 export default function Collection() {
-  const [beverages,  setBeverages]  = useState([])
-  const [loading,    setLoading]    = useState(true)
-  const [error,      setError]      = useState('')
-  const [search,     setSearch]     = useState('')
-  const [typeFilter, setTypeFilter] = useState('')
-  const [showForm,   setShowForm]   = useState(false)
-  const [saving,     setSaving]     = useState(false)
-  const [viewMode,   setViewMode]   = useState(
+  const location = useLocation()
+  const navigate  = useNavigate()
+
+  const [beverages,    setBeverages]    = useState([])
+  const [loading,      setLoading]      = useState(true)
+  const [error,        setError]        = useState('')
+  const [search,       setSearch]       = useState('')
+  const [typeFilter,   setTypeFilter]   = useState('')
+  const [showForm,     setShowForm]     = useState(false)
+  const [prefillData,  setPrefillData]  = useState(null)
+  const [saving,       setSaving]       = useState(false)
+  const [viewMode,     setViewMode]     = useState(
     () => localStorage.getItem('bodega-view') || 'auto'
   )
+
+  // Recibe datos pre-llenados desde la página de búsqueda
+  useEffect(() => {
+    if (location.state?.prefill) {
+      setPrefillData(location.state.prefill)
+      setShowForm(true)
+      navigate('/collection', { replace: true, state: {} })
+    }
+  }, [location.state, navigate])
 
   const fetchBeverages = useCallback(async () => {
     setLoading(true)
@@ -146,8 +159,9 @@ export default function Collection() {
 
       {showForm && (
         <BeverageForm
+          initial={prefillData}
           onSave={handleAdd}
-          onClose={() => setShowForm(false)}
+          onClose={() => { setShowForm(false); setPrefillData(null) }}
           loading={saving}
         />
       )}

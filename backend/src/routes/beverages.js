@@ -5,6 +5,28 @@ const { requireAuth } = require('../middleware/auth');
 const router = express.Router();
 router.use(requireAuth);
 
+// GET /api/beverages/suggestions?q=<query>  — busca entre bebidas de todos los usuarios
+router.get('/suggestions', async (req, res) => {
+  const { q } = req.query;
+  if (!q || q.trim().length < 2) return res.json([]);
+  try {
+    const result = await query(
+      `SELECT DISTINCT ON (lower(trim(name)), lower(trim(COALESCE(producer, ''))))
+         name, producer, type, country, region, grape_variety, alcohol_pct, image_url, external_url
+       FROM beverages
+       WHERE deleted_at IS NULL
+         AND (name ILIKE $1 OR producer ILIKE $1)
+       ORDER BY lower(trim(name)), lower(trim(COALESCE(producer, ''))), created_at DESC
+       LIMIT 8`,
+      [`%${q.trim()}%`]
+    );
+    res.json(result.rows.map(r => ({ ...r, source: 'community' })));
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Error del servidor' });
+  }
+});
+
 // GET /api/beverages
 router.get('/', async (req, res) => {
   try {
