@@ -25,7 +25,7 @@ export default function Search() {
     // Ambas búsquedas en paralelo
     setLoading({ vivino: true, community: true })
 
-    api.post('/scraper/search', { query: query.trim() })
+    api.post('/scraper/search', { q: query.trim() })
       .then(data  => setResults(r => ({ ...r, vivino: data })))
       .catch(err  => setErrors(e  => ({ ...e, vivino: err?.error || 'Error al buscar en Vivino' })))
       .finally(() => setLoading(l => ({ ...l, vivino: false })))
