@@ -7,11 +7,13 @@ const VIVINO_TYPE_MAP = {
 };
 
 const VIVINO_HEADERS = {
-  'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-  'Accept': 'application/json, text/plain, */*',
+  // Chrome 120/Win10 UA is blocked by Vivino's WAF (CloudFront) with 415 — use Mac UA instead
+  'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+  'Accept': 'application/json',
   'Accept-Language': 'es-AR,es;q=0.9,en;q=0.8',
   'Referer': 'https://www.vivino.com/',
-  'Origin': 'https://www.vivino.com',
+  // Axios 1.x adds Content-Type on GET requests by default; Vivino rejects it with 415
+  'Content-Type': null,
 };
 
 function normalizeVivino(match) {
@@ -34,7 +36,7 @@ function normalizeVivino(match) {
     country:              country.name || null,
     region:               region.name || null,
     type:                 VIVINO_TYPE_MAP[wine.type_id] || 'wine',
-    vintage:              v.year || null,
+    vintage:              Number.isInteger(v.year) ? v.year : null,
     grape_variety:        grapes.map(g => g.name).join(', ') || null,
     alcohol_pct:          null,
     image_url:            imgPath ? `https:${imgPath}` : null,

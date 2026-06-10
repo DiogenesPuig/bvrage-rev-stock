@@ -31,10 +31,16 @@ const pool = new Pool({ connectionString: process.env.DATABASE_URL });
 function parseArgs(argv) {
   const args = {};
   for (let i = 2; i < argv.length; i++) {
-    if (argv[i].startsWith('--')) {
-      const key = argv[i].slice(2);
-      args[key] = argv[i + 1] || true;
+    const arg = argv[i];
+    if (!arg.startsWith('--')) continue;
+    const key  = arg.slice(2);
+    const next = argv[i + 1];
+    // Solo consume el siguiente token si existe y no es otro flag
+    if (next !== undefined && !next.startsWith('--')) {
+      args[key] = next;
       i++;
+    } else {
+      args[key] = true; // flag booleano sin valor
     }
   }
   return args;
@@ -82,16 +88,29 @@ async function runQuery({ type, query: q, pages = 1 }) {
     const maxPages = Math.min(parseInt(pages) || 1, 10);
     for (let page = 1; page <= maxPages; page++) {
       process.stdout.write(`    Vivino página ${page}... `);
-      const batch = await fetchVivino(q, page, 25);
-      console.log(`${batch.length} resultados`);
-      if (!batch.length) break;
-      items = items.concat(batch);
+      try {
+        const batch = await fetchVivino(q, page, 25);
+        console.log(`${batch.length} resultados`);
+        if (!batch.length) break;
+        items = items.concat(batch);
+      } catch (err) {
+        const status = err.response?.status;
+        console.log(`error (${status || err.message})`);
+        if (status === 429) { console.log('    Límite de Vivino alcanzado, abortando esta query.'); break; }
+        if (status === 403 || status === 415) { console.log('    Vivino bloqueó la solicitud, abortando esta query.'); break; }
+        break;
+      }
       if (page < maxPages) await new Promise(r => setTimeout(r, 1200));
     }
   } else if (type === 'beer' || type === 'spirits') {
     process.stdout.write(`    Open Food Facts... `);
-    items = await fetchOFF(q, type, 50);
-    console.log(`${items.length} resultados`);
+    try {
+      items = await fetchOFF(q, type, 50);
+      console.log(`${items.length} resultados`);
+    } catch (err) {
+      console.log(`error (${err.message})`);
+      return { imported: 0, updated: 0 };
+    }
   } else {
     console.log(`    Tipo desconocido: ${type}`);
     return { imported: 0, updated: 0 };
@@ -126,8 +145,14 @@ async function main() {
   if (args.file) {
     const filePath = path.resolve(args.file);
     queries = JSON.parse(require('fs').readFileSync(filePath, 'utf8'));
-  } else if (args.type && args.query) {
-    queries = [{ type: args.type, query: args.query, pages: parseInt(args.pages) || 1 }];
+  } else if (args.type) {
+    const q = typeof args.query === 'string' ? args.query.trim() : '';
+    if (!q) {
+      console.error('Error: --query no puede estar vacío\n');
+      console.error('  Ejemplo: node scripts/populate-catalog.js --type wine --query "malbec argentina"');
+      process.exit(1);
+    }
+    queries = [{ type: args.type, query: q, pages: parseInt(args.pages) || 1 }];
   } else {
     console.error(`
 Uso:
