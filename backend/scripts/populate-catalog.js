@@ -3,17 +3,20 @@
  * Populate the beverage_catalog from external sources.
  *
  * Usage:
- *   node scripts/populate-catalog.js --type wine    --query "malbec argentina" [--pages 5]
+ *   node scripts/populate-catalog.js --type wine    --query "catena zapata"
  *   node scripts/populate-catalog.js --type beer    --query "ipa craft"
  *   node scripts/populate-catalog.js --type spirits --query "single malt scotch"
  *   node scripts/populate-catalog.js --file scripts/queries.json
  *
- * queries.json format:
+ * queries.json format (wine acepta "query" texto o "filters" estructurados):
  *   [
- *     { "type": "wine",    "query": "malbec argentina", "pages": 5 },
+ *     { "type": "wine",    "filters": { "country_codes": ["ar"], "grape_ids": [9] }, "pages": 3 },
+ *     { "type": "wine",    "query": "catena zapata" },
  *     { "type": "beer",    "query": "pale ale" },
  *     { "type": "spirits", "query": "bourbon whiskey" }
  *   ]
+ *
+ * Ver IDs de uva en src/services/catalogSources.js (9=Malbec, 2=Cabernet, 5=Chardonnay).
  */
 
 'use strict';
@@ -22,7 +25,7 @@ const path = require('path');
 require('dotenv').config({ path: path.join(__dirname, '../.env') });
 
 const { Pool } = require('pg');
-const { fetchVivino, fetchOFF } = require('../src/services/catalogSources');
+const { fetchVivino, fetchVivinoExplore, fetchOFF } = require('../src/services/catalogSources');
 
 const pool = new Pool({ connectionString: process.env.DATABASE_URL });
 
@@ -58,6 +61,7 @@ async function upsertItem(item) {
      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)
      ON CONFLICT (source, external_id) DO UPDATE SET
        name                 = EXCLUDED.name,
+       type                 = EXCLUDED.type,
        producer             = EXCLUDED.producer,
        country              = EXCLUDED.country,
        region               = EXCLUDED.region,
@@ -80,16 +84,18 @@ async function upsertItem(item) {
 
 // ─── Run a single query ───────────────────────────────────────────────────────
 
-async function runQuery({ type, query: q, pages = 1 }) {
-  console.log(`\n  [${type}] "${q}"${type === 'wine' ? ` (${pages} página/s)` : ''}`);
+async function runQuery({ type, query: q, filters, pages = 1 }) {
+  const label = filters ? JSON.stringify(filters) : `"${q}"`;
+  console.log(`\n  [${type}] ${label}${type === 'wine' && filters ? ` (${pages} página/s)` : ''}`);
 
   let items = [];
-  if (type === 'wine') {
-    const maxPages = Math.min(parseInt(pages) || 1, 10);
+  if (type === 'wine' && filters) {
+    // Bulk: API explore con filtros estructurados, pagina de a 25
+    const maxPages = Math.min(parseInt(pages) || 1, 20);
     for (let page = 1; page <= maxPages; page++) {
-      process.stdout.write(`    Vivino página ${page}... `);
+      process.stdout.write(`    Vivino explore página ${page}... `);
       try {
-        const batch = await fetchVivino(q, page, 25);
+        const batch = await fetchVivinoExplore(filters, page, 25);
         console.log(`${batch.length} resultados`);
         if (!batch.length) break;
         items = items.concat(batch);
@@ -101,6 +107,17 @@ async function runQuery({ type, query: q, pages = 1 }) {
         break;
       }
       if (page < maxPages) await new Promise(r => setTimeout(r, 1200));
+    }
+  } else if (type === 'wine') {
+    // Texto libre: página HTML de búsqueda (server-renderiza solo los primeros
+    // matches y no pagina — una sola solicitud)
+    process.stdout.write(`    Vivino búsqueda... `);
+    try {
+      items = await fetchVivino(q, 1);
+      console.log(`${items.length} resultados`);
+    } catch (err) {
+      console.log(`error (${err.response?.status || err.message})`);
+      return { imported: 0, updated: 0 };
     }
   } else if (type === 'beer' || type === 'spirits') {
     process.stdout.write(`    Open Food Facts... `);

@@ -6,9 +6,9 @@ const { fetchVivino, fetchOFF } = require('../services/catalogSources');
 const router = express.Router();
 
 // POST /api/scraper/import  — admin: importa desde fuente externa al catálogo
-// { q: string, type: 'wine' | 'beer' | 'spirits', pages?: number }
+// { q: string, type: 'wine' | 'beer' | 'spirits' }
 router.post('/import', requireAuth, requireAdmin, async (req, res) => {
-  const { q, type = 'wine', pages = 1 } = req.body;
+  const { q, type = 'wine' } = req.body;
   if (!q) return res.status(400).json({ error: 'q es obligatorio' });
   if (!['wine', 'beer', 'spirits'].includes(type)) {
     return res.status(400).json({ error: 'type debe ser wine, beer o spirits' });
@@ -17,12 +17,8 @@ router.post('/import', requireAuth, requireAdmin, async (req, res) => {
   let items = [];
   try {
     if (type === 'wine') {
-      const maxPages = Math.min(parseInt(pages) || 1, 5);
-      for (let page = 1; page <= maxPages; page++) {
-        const batch = await fetchVivino(q, page, 25);
-        if (!batch.length) break;
-        items = items.concat(batch);
-      }
+      // La búsqueda HTML de Vivino no pagina (el SSR siempre trae lo mismo)
+      items = await fetchVivino(q, 1);
     } else {
       items = await fetchOFF(q, type, 50);
     }
@@ -47,6 +43,7 @@ router.post('/import', requireAuth, requireAdmin, async (req, res) => {
          VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)
          ON CONFLICT (source, external_id) DO UPDATE SET
            name                 = EXCLUDED.name,
+           type                 = EXCLUDED.type,
            producer             = EXCLUDED.producer,
            country              = EXCLUDED.country,
            region               = EXCLUDED.region,

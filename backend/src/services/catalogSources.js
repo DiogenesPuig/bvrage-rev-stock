@@ -1,14 +1,28 @@
 const axios = require('axios');
 
 // ─── Vivino ───────────────────────────────────────────────────────────────────
+//
+// Vivino expone dos caminos, ninguno completo:
+//  - /api/explore/explore (JSON): pagina y trae datos ricos, pero IGNORA el
+//    texto libre — solo filtra por parámetros estructurados (country_codes[],
+//    grape_ids[], price_range_*) y solo lista vinos con ofertas de compra
+//    activas (~decenas a cientos por filtro). → fetchVivinoExplore, para bulk.
+//  - /es/search/wines?q= (HTML): sí respeta el texto, pero server-renderiza
+//    solo los primeros ~4-12 matches y el parámetro page no cambia el SSR.
+//    → fetchVivino, para búsquedas puntuales.
 
-const VIVINO_TYPE_MAP = {
-  1: 'wine', 2: 'wine', 3: 'wine', 4: 'wine', 7: 'wine', 24: 'wine',
-};
+// Chrome/Win10 UA is blocked by Vivino's WAF (CloudFront) — use Mac UA instead
+const VIVINO_UA = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36';
 
 const VIVINO_HEADERS = {
-  // Chrome 120/Win10 UA is blocked by Vivino's WAF (CloudFront) with 415 — use Mac UA instead
-  'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+  'User-Agent': VIVINO_UA,
+  'Accept': 'text/html,application/xhtml+xml',
+  'Accept-Language': 'es-AR,es;q=0.9,en;q=0.8',
+  'Referer': 'https://www.vivino.com/',
+};
+
+const VIVINO_API_HEADERS = {
+  'User-Agent': VIVINO_UA,
   'Accept': 'application/json',
   'Accept-Language': 'es-AR,es;q=0.9,en;q=0.8',
   'Referer': 'https://www.vivino.com/',
@@ -16,7 +30,12 @@ const VIVINO_HEADERS = {
   'Content-Type': null,
 };
 
-function normalizeVivino(match) {
+// IDs de uva de /api/grapes (los más comunes, para armar filtros):
+//   1 Syrah · 2 Cabernet Sauvignon · 5 Chardonnay · 8 Grenache · 9 Malbec
+//   10 Merlot · 12 Nebbiolo · 14 Pinot Noir · 15 Riesling · 16 Sangiovese
+//   17 Sauvignon Blanc · 19 Tempranillo · 21 Zinfandel
+
+function normalizeVivinoMatch(match) {
   const v       = match.vintage   || {};
   const wine    = v.wine          || {};
   const winery  = wine.winery     || {};
@@ -35,7 +54,7 @@ function normalizeVivino(match) {
     producer:             winery.name || null,
     country:              country.name || null,
     region:               region.name || null,
-    type:                 VIVINO_TYPE_MAP[wine.type_id] || 'wine',
+    type:                 'wine',
     vintage:              Number.isInteger(v.year) ? v.year : null,
     grape_variety:        grapes.map(g => g.name).join(', ') || null,
     alcohol_pct:          null,
@@ -46,13 +65,96 @@ function normalizeVivino(match) {
   };
 }
 
-async function fetchVivino(q, page = 1, perPage = 25) {
+/**
+ * Bulk por filtros estructurados. `filters` admite, entre otros:
+ *   country_codes: ['ar']      países de origen
+ *   grape_ids:     [9]         uvas (ver tabla arriba)
+ *   wine_type_ids: [1]         1 tinto, 2 blanco, 3 espumante, 4 rosado
+ *   min_rating, price_range_min, price_range_max
+ */
+async function fetchVivinoExplore(filters = {}, page = 1, perPage = 25) {
+  const params = { per_page: perPage, page, language: 'es' };
+  for (const [key, val] of Object.entries(filters)) {
+    if (Array.isArray(val)) params[`${key}[]`] = val;
+    else params[key] = val;
+  }
   const { data } = await axios.get('https://www.vivino.com/api/explore/explore', {
-    params: { q, per_page: perPage, page, language: 'es', min_rating: 1 },
-    headers: VIVINO_HEADERS,
+    params,
+    headers: VIVINO_API_HEADERS,
     timeout: 15000,
   });
-  return (data?.explore_vintage?.matches || []).map(normalizeVivino);
+  return (data?.explore_vintage?.matches || [])
+    .map(normalizeVivinoMatch)
+    .filter(p => p.name && p.external_id);
+}
+
+function decodeEntities(s) {
+  if (!s) return s;
+  return s
+    .replace(/<!--\s*-->/g, '')
+    .replace(/&#(\d+);/g, (_, n) => String.fromCharCode(n))
+    .replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"').replace(/&#x27;|&apos;/g, "'")
+    .trim();
+}
+
+function parseVivinoCard(card) {
+  const link = card.match(/data-testid="vintagePageLink"\s+href="([^"]+)"/);
+  if (!link) return null;
+  const href   = decodeEntities(link[1]);
+  const wineId = href.match(/\/w\/(\d+)/)?.[1];
+  if (!wineId) return null;
+  const year = href.match(/[?&]year=(\d{4})/)?.[1];
+
+  const producer    = card.match(/wineInfoVintage__truncate--[\w-]+">([^<]+)</)?.[1];
+  const nameVintage = card.match(/wineInfoVintage__vintage--[\w-]+[^"]*">([^<]+)</)?.[1];
+  let name = decodeEntities(nameVintage || '');
+  // El div de nombre incluye la añada al final ("Malbec 2022") — separarla
+  name = name.replace(/\s+\d{4}$/, '').trim();
+
+  const regionCountry = card.match(/wineInfoLocation__regionAndCountry--[\w-]+">(.*?)<\/div>/)?.[1];
+  let region = null, country = null;
+  if (regionCountry) {
+    const parts = decodeEntities(regionCountry).split(',').map(s => s.trim()).filter(Boolean);
+    country = parts.pop() || null;
+    region  = parts.join(', ') || null;
+  }
+
+  const rating = card.match(/vivinoRating__averageValue--[\w-]+">([\d.,]+)</)?.[1];
+  const img    = card.match(/<img src="(\/\/images\.vivino\.com[^"]+)"/)?.[1];
+
+  return {
+    source:               'vivino',
+    external_id:          year ? `${wineId}_${year}` : wineId,
+    vivino_vintage_id:    null,
+    name:                 name || null,
+    producer:             producer ? decodeEntities(producer) : null,
+    country,
+    region,
+    type:                 'wine',
+    vintage:              year ? parseInt(year) : null,
+    grape_variety:        null,
+    alcohol_pct:          null,
+    image_url:            img ? `https:${img}` : null,
+    external_url:         `https://www.vivino.com${href.split('?')[0]}`,
+    vivino_rating:        rating ? parseFloat(rating.replace(',', '.')) : null,
+    vivino_ratings_count: 0,
+  };
+}
+
+async function fetchVivino(q, page = 1) {
+  const { data: html } = await axios.get('https://www.vivino.com/es/search/wines', {
+    params: { q, page },
+    headers: VIVINO_HEADERS,
+    timeout: 20000,
+    maxRedirects: 5,
+  });
+
+  // Cada card empieza en data-testid="wineCard"; el split descarta el preámbulo
+  const cards = String(html).split('data-testid="wineCard"').slice(1);
+  return cards
+    .map(parseVivinoCard)
+    .filter(p => p !== null && p.name && p.external_id);
 }
 
 // ─── Open Food Facts ──────────────────────────────────────────────────────────
@@ -62,11 +164,13 @@ const OFF_CATEGORY_MAP = {
   spirits: 'spirits',
 };
 
-function normalizeOFF(product) {
+function normalizeOFF(product, requestedType = 'other') {
   if (!product.product_name?.trim()) return null;
 
+  // Muchos productos traen categorías vacías o en otros idiomas — si no se
+  // puede detectar, usar el tipo solicitado (la API ya filtró por categoría)
   const cats = (product.categories || '').toLowerCase();
-  let type = 'other';
+  let type = requestedType;
   if (cats.match(/whisk(e?y|ies)|gin\b|rum\b|vodka|tequila|brandy|cognac|scotch|spirit|mezcal|aguardiente/))
     type = 'spirits';
   else if (cats.match(/\bbeer\b|cerveza|ale\b|lager|stout|porter|\bipa\b|sour\b|pilsner/))
@@ -114,15 +218,26 @@ async function fetchOFF(q, type, perPage = 30) {
     params.tag_0 = OFF_CATEGORY_MAP[type];
   }
 
-  const { data } = await axios.get('https://world.openfoodfacts.org/cgi/search.pl', {
-    params,
-    timeout: 12000,
-    headers: { 'User-Agent': 'CaveBin/1.0 (diogenespuig@gmail.com)' },
-  });
-
-  return (data?.products || [])
-    .map(normalizeOFF)
-    .filter(p => p !== null && p.name && p.external_id);
+  // El search de OFF devuelve 503 intermitentes bajo carga — reintentar con backoff
+  let lastErr;
+  for (let attempt = 0; attempt < 3; attempt++) {
+    if (attempt > 0) await new Promise(r => setTimeout(r, 3000 * attempt));
+    try {
+      const { data } = await axios.get('https://world.openfoodfacts.org/cgi/search.pl', {
+        params,
+        timeout: 12000,
+        headers: { 'User-Agent': 'CaveBin/1.0 (diogenespuig@gmail.com)' },
+      });
+      return (data?.products || [])
+        .map(p => normalizeOFF(p, type))
+        .filter(p => p !== null && p.name && p.external_id);
+    } catch (err) {
+      lastErr = err;
+      const status = err.response?.status;
+      if (status !== 503 && status !== 429) throw err;
+    }
+  }
+  throw lastErr;
 }
 
-module.exports = { fetchVivino, fetchOFF, normalizeVivino, normalizeOFF };
+module.exports = { fetchVivino, fetchVivinoExplore, fetchOFF, parseVivinoCard, normalizeOFF };
