@@ -5,51 +5,75 @@ import BeverageIcon from '../components/BeverageIcon'
 import { api } from '../services/api'
 import { useAuth } from '../context/AuthContext'
 
-const TABS = ['vivino', 'community']
-const TAB_LABELS = { vivino: 'Vivino', community: 'Comunidad' }
+const TYPE_FILTERS = [
+  { value: 'all',     label: 'Todos' },
+  { value: 'wine',    label: 'Vino' },
+  { value: 'beer',    label: 'Cerveza' },
+  { value: 'spirits', label: 'Destilado' },
+]
+
+const SOURCE_LABELS = {
+  vivino:        { label: 'Vivino',    color: 'text-amber-400 bg-amber-950' },
+  openfoodfacts: { label: 'OFF',       color: 'text-green-400 bg-green-950' },
+  catalog:       { label: 'Catálogo',  color: 'text-zinc-400 bg-zinc-800'   },
+}
+
+const IMPORT_SOURCES = {
+  wine:    'Vivino',
+  beer:    'Open Food Facts',
+  spirits: 'Open Food Facts',
+  all:     'Vivino',
+}
 
 export default function Search() {
-  const navigate    = useNavigate()
-  const { user }    = useAuth()
-  const [query,      setQuery]      = useState('')
-  const [tab,        setTab]        = useState('vivino')
-  const [results,    setResults]    = useState({ vivino: [], community: [] })
-  const [loading,    setLoading]    = useState({ vivino: false, community: false })
-  const [errors,     setErrors]     = useState({ vivino: null, community: null })
-  const [searched,   setSearched]   = useState(false)
-  const [importing,  setImporting]  = useState(false)
-  const [importMsg,  setImportMsg]  = useState(null)
+  const navigate   = useNavigate()
+  const { user }   = useAuth()
+
+  const [query,     setQuery]     = useState('')
+  const [typeFilter, setTypeFilter] = useState('all')
+  const [tab,       setTab]       = useState('online')
+  const [results,   setResults]   = useState({ online: [], catalog: [] })
+  const [loading,   setLoading]   = useState({ online: false, catalog: false })
+  const [errors,    setErrors]    = useState({ online: null, catalog: null })
+  const [searched,  setSearched]  = useState(false)
+  const [importing, setImporting] = useState(false)
+  const [importMsg, setImportMsg] = useState(null)
 
   const search = async () => {
     if (!query.trim()) return
     setSearched(true)
-    setResults({ vivino: [], community: [] })
-    setErrors({ vivino: null, community: null })
+    setResults({ online: [], catalog: [] })
+    setErrors({ online: null, catalog: null })
+    setLoading({ online: true, catalog: true })
+    setImportMsg(null)
 
-    // Ambas búsquedas en paralelo
-    setLoading({ vivino: true, community: true })
+    const q   = query.trim()
+    const cat = typeFilter !== 'all' ? typeFilter : undefined
 
-    api.post('/scraper/search', { q: query.trim() })
-      .then(data  => setResults(r => ({ ...r, vivino: data })))
-      .catch(err  => setErrors(e  => ({ ...e, vivino: err?.error || 'Error al buscar en Vivino' })))
-      .finally(() => setLoading(l => ({ ...l, vivino: false })))
+    api.post('/scraper/search', { q, type: typeFilter })
+      .then(data  => setResults(r => ({ ...r, online: data })))
+      .catch(err  => setErrors(e  => ({ ...e, online: err?.error || 'Error al buscar online' })))
+      .finally(() => setLoading(l => ({ ...l, online: false })))
 
-    api.get(`/beverages/suggestions?q=${encodeURIComponent(query.trim())}`)
-      .then(data  => setResults(r => ({ ...r, community: data })))
-      .catch(()   => setErrors(e  => ({ ...e, community: 'Error al buscar en comunidad' })))
-      .finally(() => setLoading(l => ({ ...l, community: false })))
+    api.get(`/beverages/suggestions?q=${encodeURIComponent(q)}${cat ? `&type=${cat}` : ''}`)
+      .then(data  => setResults(r => ({ ...r, catalog: data })))
+      .catch(()   => setErrors(e  => ({ ...e, catalog: 'Error al buscar en catálogo' })))
+      .finally(() => setLoading(l => ({ ...l, catalog: false })))
   }
 
   const handleImport = async () => {
-    if (!query.trim()) return
+    const importType = typeFilter === 'all' ? 'wine' : typeFilter
     setImporting(true)
     setImportMsg(null)
     try {
-      const data = await api.post('/scraper/import', { q: query.trim(), pages: 3 })
+      const data = await api.post('/scraper/import', {
+        q: query.trim(),
+        type: importType,
+        pages: importType === 'wine' ? 3 : 1,
+      })
       setImportMsg(`✓ ${data.imported} nuevos, ${data.updated} actualizados`)
-      // Refrescar tab comunidad para mostrar los recién importados
       api.get(`/beverages/suggestions?q=${encodeURIComponent(query.trim())}`)
-        .then(d => setResults(r => ({ ...r, community: d })))
+        .then(d => setResults(r => ({ ...r, catalog: d })))
         .catch(() => {})
     } catch (err) {
       setImportMsg(`Error: ${err?.error || 'No se pudo importar'}`)
@@ -59,17 +83,16 @@ export default function Search() {
   }
 
   const handleSelect = (item) => {
-    // Solo mandamos campos estables — NO vintage, personal_note, rating
     const prefill = {
-      name:         item.name         || '',
-      producer:     item.producer     || '',
-      type:         item.type         || 'wine',
-      country:      item.country      || '',
-      region:       item.region       || '',
+      name:          item.name          || '',
+      producer:      item.producer      || '',
+      type:          item.type          || 'wine',
+      country:       item.country       || '',
+      region:        item.region        || '',
       grape_variety: item.grape_variety || '',
-      alcohol_pct:  item.alcohol_pct  || '',
-      image_url:    item.image_url    || '',
-      external_url: item.external_url || '',
+      alcohol_pct:   item.alcohol_pct   || '',
+      image_url:     item.image_url     || '',
+      external_url:  item.external_url  || '',
     }
     navigate('/collection', { state: { prefill } })
   }
@@ -101,41 +124,63 @@ export default function Search() {
           </button>
         </div>
 
+        {/* Filtro por tipo */}
+        <div className="flex gap-2 flex-wrap">
+          {TYPE_FILTERS.map(f => (
+            <button
+              key={f.value}
+              onClick={() => setTypeFilter(f.value)}
+              className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
+                typeFilter === f.value
+                  ? 'bg-zinc-100 text-zinc-900'
+                  : 'bg-zinc-800 text-zinc-400 hover:text-zinc-200'
+              }`}
+            >
+              {f.label}
+            </button>
+          ))}
+        </div>
+
         {/* Importar al catálogo — solo admins */}
-        {user?.is_admin && <div className="flex items-center gap-3">
-          <button
-            onClick={handleImport}
-            disabled={!query.trim() || importing}
-            className="flex items-center gap-2 text-sm text-zinc-400 hover:text-zinc-200 disabled:opacity-40 transition-colors"
-          >
-            {importing
-              ? <><Spinner /> Importando...</>
-              : <><DownloadIcon /> Guardar en catálogo (Vivino)</>
-            }
-          </button>
-          {importMsg && (
-            <span className={`text-xs ${importMsg.startsWith('✓') ? 'text-emerald-400' : 'text-red-400'}`}>
-              {importMsg}
-            </span>
-          )}
-        </div>}
+        {user?.is_admin && (
+          <div className="flex items-center gap-3">
+            <button
+              onClick={handleImport}
+              disabled={!query.trim() || importing}
+              className="flex items-center gap-2 text-sm text-zinc-400 hover:text-zinc-200 disabled:opacity-40 transition-colors"
+            >
+              {importing
+                ? <><Spinner /> Importando...</>
+                : <><DownloadIcon /> Guardar en catálogo ({IMPORT_SOURCES[typeFilter]})</>
+              }
+            </button>
+            {importMsg && (
+              <span className={`text-xs ${importMsg.startsWith('✓') ? 'text-emerald-400' : 'text-red-400'}`}>
+                {importMsg}
+              </span>
+            )}
+          </div>
+        )}
 
         {/* Tabs */}
         {searched && (
           <div className="flex border-b border-zinc-800">
-            {TABS.map(t => (
+            {[
+              { id: 'online',  label: 'Online' },
+              { id: 'catalog', label: 'Catálogo' },
+            ].map(t => (
               <button
-                key={t}
-                onClick={() => setTab(t)}
+                key={t.id}
+                onClick={() => setTab(t.id)}
                 className={`px-4 py-2.5 text-sm font-medium transition-colors border-b-2 -mb-px ${
-                  tab === t
+                  tab === t.id
                     ? 'border-zinc-100 text-zinc-100'
                     : 'border-transparent text-zinc-500 hover:text-zinc-300'
                 }`}
               >
-                {TAB_LABELS[t]}
-                {results[t].length > 0 && (
-                  <span className="ml-1.5 text-xs text-zinc-600">({results[t].length})</span>
+                {t.label}
+                {results[t.id].length > 0 && (
+                  <span className="ml-1.5 text-xs text-zinc-600">({results[t.id].length})</span>
                 )}
               </button>
             ))}
@@ -150,15 +195,14 @@ export default function Search() {
                 <div className="w-5 h-5 border-2 border-zinc-700 border-t-zinc-400 rounded-full animate-spin" />
               </div>
             )}
-
             {!isLoading && activeError && (
               <p className="text-sm text-red-400 py-6 text-center">{activeError}</p>
             )}
-
             {!isLoading && !activeError && activeResults.length === 0 && (
-              <p className="text-sm text-zinc-600 py-10 text-center">Sin resultados para "{query}"</p>
+              <p className="text-sm text-zinc-600 py-10 text-center">
+                Sin resultados para "{query}"
+              </p>
             )}
-
             <div className="space-y-2">
               {activeResults.map((item, i) => (
                 <ResultCard key={i} item={item} onSelect={() => handleSelect(item)} />
@@ -192,6 +236,8 @@ function DownloadIcon() {
 }
 
 function ResultCard({ item, onSelect }) {
+  const badge = SOURCE_LABELS[item.source]
+
   return (
     <div className="bg-zinc-900 rounded-xl p-3 flex gap-3 items-center border border-zinc-800 hover:border-zinc-700 transition-colors">
       <BeverageIcon
@@ -204,11 +250,13 @@ function ResultCard({ item, onSelect }) {
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2 flex-wrap">
           <p className="font-medium text-zinc-100 truncate">{item.name}</p>
-          {item.source === 'vivino' && item.vivino_rating && (
-            <span className="text-xs text-amber-400 shrink-0">★ {item.vivino_rating}</span>
+          {item.vivino_rating && (
+            <span className="text-xs text-amber-400 shrink-0">★ {Number(item.vivino_rating).toFixed(1)}</span>
           )}
-          {item.source === 'community' && (
-            <span className="text-xs text-zinc-600 bg-zinc-800 px-1.5 py-0.5 rounded shrink-0">comunidad</span>
+          {badge && (
+            <span className={`text-xs px-1.5 py-0.5 rounded shrink-0 ${badge.color}`}>
+              {badge.label}
+            </span>
           )}
         </div>
         <p className="text-sm text-zinc-500 truncate mt-0.5">
@@ -216,6 +264,9 @@ function ResultCard({ item, onSelect }) {
         </p>
         {item.grape_variety && (
           <p className="text-xs text-zinc-600 mt-0.5 truncate">{item.grape_variety}</p>
+        )}
+        {item.alcohol_pct && (
+          <p className="text-xs text-zinc-600 mt-0.5">{item.alcohol_pct}% alc.</p>
         )}
       </div>
 

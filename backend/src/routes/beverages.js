@@ -5,22 +5,29 @@ const { requireAuth } = require('../middleware/auth');
 const router = express.Router();
 router.use(requireAuth);
 
-// GET /api/beverages/suggestions?q=<query>  — busca solo en wine_catalog (curado por admin)
+// GET /api/beverages/suggestions?q=<query>&type=<type>  — busca en beverage_catalog (curado por admin)
 router.get('/suggestions', async (req, res) => {
-  const { q } = req.query;
+  const { q, type } = req.query;
   if (!q || q.trim().length < 2) return res.json([]);
   try {
+    const params = [`%${q.trim()}%`];
+    let typeFilter = '';
+    if (type && type !== 'all') {
+      typeFilter = ` AND type = $2`;
+      params.push(type);
+    }
+
     const result = await query(
       `SELECT DISTINCT ON (lower(trim(name)), lower(trim(COALESCE(producer, ''))))
          name, producer, type, country, region, grape_variety,
          NULL AS alcohol_pct, image_url, external_url, 'catalog' AS source,
          vivino_rating
-       FROM wine_catalog
-       WHERE name ILIKE $1 OR producer ILIKE $1
+       FROM beverage_catalog
+       WHERE (name ILIKE $1 OR producer ILIKE $1)${typeFilter}
        ORDER BY lower(trim(name)), lower(trim(COALESCE(producer, ''))),
                 vivino_ratings_count DESC
        LIMIT 10`,
-      [`%${q.trim()}%`]
+      params
     );
     res.json(result.rows);
   } catch (err) {
