@@ -15,11 +15,10 @@
   { "type": "wine", "query": "catena zapata" },
   { "type": "wine", "query": "luigi bosca" },
 
-  { "type": "beer",    "query": "ipa craft beer" },
-  { "type": "beer",    "query": "stout porter" },
-  { "type": "beer",    "query": "pale ale lager" },
-  { "type": "spirits", "query": "single malt scotch whisky" },
-  { "type": "spirits", "query": "bourbon whiskey" },
-  { "type": "spirits", "query": "gin craft" },
-  { "type": "spirits", "query": "ron rum aged" }
+  { "type": "beer",    "category": "en:beers",    "pages": 20 },
+  { "type": "wine",    "category": "en:wines",    "pages": 20 },
+  { "type": "spirits", "category": "en:hard-liquors", "pages": 20 },
+  { "type": "spirits", "category": "en:whisky",        "pages": 10 },
+  { "type": "spirits", "category": "en:gins",     "pages": 5 },
+  { "type": "spirits", "category": "en:rums",     "pages": 5 }
 ]

@@ -25,7 +25,7 @@ const path = require('path');
 require('dotenv').config({ path: path.join(__dirname, '../.env') });
 
 const { Pool } = require('pg');
-const { fetchVivino, fetchVivinoExplore, fetchOFF } = require('../src/services/catalogSources');
+const { fetchVivino, fetchVivinoExplore, fetchOFF, fetchOFFCategory } = require('../src/services/catalogSources');
 
 const pool = new Pool({ connectionString: process.env.DATABASE_URL });
 
@@ -84,12 +84,29 @@ async function upsertItem(item) {
 
 // ─── Run a single query ───────────────────────────────────────────────────────
 
-async function runQuery({ type, query: q, filters, pages = 1 }) {
-  const label = filters ? JSON.stringify(filters) : `"${q}"`;
-  console.log(`\n  [${type}] ${label}${type === 'wine' && filters ? ` (${pages} página/s)` : ''}`);
+async function runQuery({ type, query: q, filters, category, pages = 1 }) {
+  const label = filters ? JSON.stringify(filters) : category ? `categoría ${category}` : `"${q}"`;
+  const paginates = (type === 'wine' && filters) || category;
+  console.log(`\n  [${type}] ${label}${paginates ? ` (${pages} página/s)` : ''}`);
 
   let items = [];
-  if (type === 'wine' && filters) {
+  if (category) {
+    // Bulk OFF: search-a-licious por categoría, 50 por página, populares primero
+    const maxPages = Math.min(parseInt(pages) || 1, 40);
+    for (let page = 1; page <= maxPages; page++) {
+      process.stdout.write(`    OFF ${category} página ${page}... `);
+      try {
+        const batch = await fetchOFFCategory(category, type, page, 50);
+        console.log(`${batch.length} resultados`);
+        if (!batch.length) break;
+        items = items.concat(batch);
+      } catch (err) {
+        console.log(`error (${err.response?.status || err.message})`);
+        break;
+      }
+      if (page < maxPages) await new Promise(r => setTimeout(r, 800));
+    }
+  } else if (type === 'wine' && filters) {
     // Bulk: API explore con filtros estructurados, pagina de a 25
     const maxPages = Math.min(parseInt(pages) || 1, 20);
     for (let page = 1; page <= maxPages; page++) {
@@ -163,21 +180,24 @@ async function main() {
     const filePath = path.resolve(args.file);
     queries = JSON.parse(require('fs').readFileSync(filePath, 'utf8'));
   } else if (args.type) {
-    const q = typeof args.query === 'string' ? args.query.trim() : '';
-    if (!q) {
-      console.error('Error: --query no puede estar vacío\n');
-      console.error('  Ejemplo: node scripts/populate-catalog.js --type wine --query "malbec argentina"');
+    const q   = typeof args.query    === 'string' ? args.query.trim()    : '';
+    const cat = typeof args.category === 'string' ? args.category.trim() : '';
+    if (!q && !cat) {
+      console.error('Error: hace falta --query o --category\n');
+      console.error('  Ejemplo: node scripts/populate-catalog.js --type beer --category en:beers --pages 10');
       process.exit(1);
     }
-    queries = [{ type: args.type, query: q, pages: parseInt(args.pages) || 1 }];
+    queries = [{ type: args.type, query: q || undefined, category: cat || undefined, pages: parseInt(args.pages) || 1 }];
   } else {
     console.error(`
 Uso:
-  node scripts/populate-catalog.js --type wine    --query "malbec argentina" [--pages 5]
-  node scripts/populate-catalog.js --type beer    --query "ipa craft"
+  node scripts/populate-catalog.js --type wine    --query "catena zapata"
+  node scripts/populate-catalog.js --type beer    --category en:beers    [--pages 10]
+  node scripts/populate-catalog.js --type spirits --category en:whisky [--pages 10]
   node scripts/populate-catalog.js --type spirits --query "single malt scotch"
   node scripts/populate-catalog.js --file scripts/queries.json
 
+Categorías OFF útiles: en:beers, en:wines, en:hard-liquors, en:whisky, en:gins, en:rums
 Variables de entorno:
   VERBOSE=1   muestra errores detallados por ítem
     `);

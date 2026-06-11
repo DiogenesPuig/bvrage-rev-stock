@@ -240,4 +240,68 @@ async function fetchOFF(q, type, perPage = 30) {
   throw lastErr;
 }
 
-module.exports = { fetchVivino, fetchVivinoExplore, fetchOFF, parseVivinoCard, normalizeOFF };
+// ─── Open Food Facts: bulk por categoría (search-a-licious) ──────────────────
+//
+// search.openfoodfacts.org es infraestructura separada del cgi/search.pl
+// (que sufre 503 crónicos) y expone hasta ~10.000 ítems por categoría,
+// paginados y ordenables por popularidad (cantidad de escaneos).
+// Categorías útiles: en:beers, en:wines, en:hard-liquors, en:whisky, en:gins,
+// en:rums, en:liqueurs, en:tequilas — ver https://world.openfoodfacts.org/categories
+
+function offTagToText(tag) {
+  if (!tag) return null;
+  return tag.replace(/^[a-z]{2}:/, '').replace(/-/g, ' ');
+}
+
+function normalizeOFFBulk(hit, requestedType) {
+  if (!hit.product_name || typeof hit.product_name !== 'string' || !hit.product_name.trim()) return null;
+
+  const tags = hit.categories_tags || [];
+  let type = requestedType;
+  if (tags.includes('en:beers')) type = 'beer';
+  else if (tags.includes('en:wines')) type = 'wine';
+  else if (tags.includes('en:hard-liquors') || tags.includes('en:whisky') || tags.includes('en:eaux-de-vie') || tags.includes('en:liqueurs')) type = 'spirits';
+
+  const abv =
+    hit.nutriments?.['alcohol_100g'] ??
+    (hit.alcohol_value ? parseFloat(hit.alcohol_value) : null) ?? null;
+
+  return {
+    source:               'openfoodfacts',
+    external_id:          hit.code || null,
+    vivino_vintage_id:    null,
+    name:                 hit.product_name.trim(),
+    producer:             (Array.isArray(hit.brands) ? hit.brands[0] : hit.brands)?.trim() || null,
+    country:              offTagToText(hit.countries_tags?.[0]),
+    region:               null,
+    type,
+    vintage:              null,
+    grape_variety:        null,
+    alcohol_pct:          abv ? parseFloat(abv) : null,
+    image_url:            hit.image_front_url || hit.image_url || null,
+    external_url:         hit.code ? `https://world.openfoodfacts.org/product/${hit.code}` : null,
+    vivino_rating:        null,
+    vivino_ratings_count: 0,
+  };
+}
+
+async function fetchOFFCategory(category, type, page = 1, pageSize = 50) {
+  const { data } = await axios.get('https://search.openfoodfacts.org/search', {
+    params: {
+      q: `categories_tags:"${category}"`,
+      page_size: pageSize,
+      page,
+      sort_by: '-unique_scans_n',
+    },
+    timeout: 20000,
+    headers: { 'User-Agent': 'CaveBin/1.0 (diogenespuig@gmail.com)' },
+  });
+  return (data?.hits || [])
+    .map(h => normalizeOFFBulk(h, type))
+    .filter(p => p !== null && p.name && p.external_id);
+}
+
+module.exports = {
+  fetchVivino, fetchVivinoExplore, fetchOFF, fetchOFFCategory,
+  parseVivinoCard, normalizeOFF, normalizeOFFBulk,
+};
