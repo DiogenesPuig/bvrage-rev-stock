@@ -19,10 +19,17 @@ App para gestionar una colección personal de bebidas alcohólicas. Multi-usuari
   - Reseñas públicas (lectura sin auth, escritura con auth)
   - Scraper: placeholder, implementar en Fase 3
 
-- [ ] **Fase 2 – Frontend + PWA** ← PRÓXIMO PASO
-- [ ] **Fase 3 – Scraping** (Vivino con Puppeteer)
-- [ ] **Fase 4 – Sección comunitaria**
-- [ ] **Fase 5 – Pulido**
+- [x] **Fase 2 – Frontend + PWA**
+  - React + Vite + Tailwind + vite-plugin-pwa
+  - Páginas: Login, Register, Collection (bodega, grilla/lista), BeverageDetail, Locations, Community, Search, Home
+- [x] **Fase 3 – Catálogo + fuentes externas** (sin Puppeteer)
+  - `beverage_catalog` (~3.100 ítems): vinos, cervezas y destilados
+  - Fuentes: Vivino (API explore con filtros + scraping HTML para texto) y Open Food Facts (search-a-licious por categoría)
+  - Script CLI `backend/scripts/populate-catalog.js`; búsqueda en la app solo contra el catálogo local
+  - Search.jsx: navegación por categoría con grilla/lista e infinite scroll, pre-fill al agregar
+- [x] **Fase 4 – Sección comunitaria** (Community.jsx + reviews)
+- [ ] **Fase 5 – Pulido** ← PRÓXIMO PASO
+  - Filtros avanzados en la colección, alertas de stock bajo, estadísticas, exportar CSV, escaneo de etiquetas, ocasión de consumo
 
 Ver `PLAN.md` para arquitectura completa, modelo de datos y decisiones de diseño.
 
@@ -64,22 +71,21 @@ npm run migrate         # crea todas las tablas
 npm run dev             # http://localhost:3001
 ```
 
-## Próximos pasos (Fase 2)
+## Próximos pasos (Fase 5 – Pulido)
 
-```bash
-cd ..
-npm create vite@latest frontend -- --template react
-cd frontend
-npm install
-npm install -D tailwindcss postcss autoprefixer vite-plugin-pwa
-npx tailwindcss init -p
-```
+- Filtros avanzados y búsqueda en la colección
+- Alertas de stock bajo ("solo te queda 1 botella")
+- Estadísticas: valor total de la colección, botellas por tipo, consumo mensual
+- Exportar colección a CSV
+- Escanear etiqueta con cámara del celu
+- Registrar ocasión al consumir ("con quién", "para qué")
 
-Componentes a crear:
-- `AuthContext.jsx` — estado global de sesión + refresh automático
-- `pages/Login.jsx`, `Register.jsx`
-- `pages/Collection.jsx` — lista de bebidas con stock total
-- `pages/Detail.jsx` — detalle + historial de movimientos + stock por ubicación
-- `components/MovementForm.jsx` — registrar compra o consumo
-- `pages/Locations.jsx` — gestión de ubicaciones
-- `pages/Community.jsx` — reseñas públicas
+## Notas del catálogo
+
+- La API explore de Vivino ignora texto libre (solo filtros estructurados) y
+  solo lista vinos comprables (~60 por país). La búsqueda HTML sí respeta texto
+  pero trae pocos resultados y no pagina. Ver `backend/src/services/catalogSources.js`.
+- OFF bulk: usar `search.openfoodfacts.org` (no `cgi/search.pl`, da 503).
+  Tags de categoría reales: `en:hard-liquors`, `en:whisky` (singular), `en:beers`, `en:wines`.
+- Dedup del catálogo por (nombre, productor, tipo, añada) con índice único
+  parcial para OFF (migración 011/012).

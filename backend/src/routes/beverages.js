@@ -36,6 +36,49 @@ router.get('/suggestions', async (req, res) => {
   }
 });
 
+// GET /api/beverages/catalog?type=&q=&limit=20&offset=0 — navegar el catálogo
+// Sin q lista por categoría (populares primero); con q filtra por texto.
+// Colapsa añadas de un mismo vino (queda la de más reseñas).
+router.get('/catalog', async (req, res) => {
+  const { type, q } = req.query;
+  const limit  = Math.min(parseInt(req.query.limit) || 20, 50);
+  const offset = Math.max(parseInt(req.query.offset) || 0, 0);
+
+  try {
+    const params = [];
+    let where = 'TRUE';
+    if (type && type !== 'all') {
+      params.push(type);
+      where += ` AND type = $${params.length}`;
+    }
+    if (q && q.trim()) {
+      params.push(`%${q.trim()}%`);
+      where += ` AND (name ILIKE $${params.length} OR producer ILIKE $${params.length})`;
+    }
+    params.push(limit, offset);
+
+    const result = await query(
+      `SELECT * FROM (
+         SELECT DISTINCT ON (lower(trim(name)), lower(trim(COALESCE(producer, ''))))
+           id, name, producer, type, country, region, grape_variety,
+           NULL AS alcohol_pct, image_url, external_url, 'catalog' AS source,
+           vivino_rating, vivino_ratings_count
+         FROM beverage_catalog
+         WHERE ${where}
+         ORDER BY lower(trim(name)), lower(trim(COALESCE(producer, ''))),
+                  vivino_ratings_count DESC
+       ) t
+       ORDER BY vivino_ratings_count DESC, (producer IS NULL), (image_url IS NULL), id
+       LIMIT $${params.length - 1} OFFSET $${params.length}`,
+      params
+    );
+    res.json(result.rows);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Error del servidor' });
+  }
+});
+
 // GET /api/beverages
 router.get('/', async (req, res) => {
   try {

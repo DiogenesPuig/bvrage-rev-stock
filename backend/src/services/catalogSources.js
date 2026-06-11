@@ -190,8 +190,8 @@ function normalizeOFF(product, requestedType = 'other') {
     source:               'openfoodfacts',
     external_id:          product.code || null,
     vivino_vintage_id:    null,
-    name:                 product.product_name.trim(),
-    producer:             product.brands?.split(',')[0]?.trim() || null,
+    name:                 decodeEntities(product.product_name),
+    producer:             decodeEntities(product.brands?.split(',')[0] || '') || null,
     country,
     region:               null,
     type,
@@ -250,7 +250,8 @@ async function fetchOFF(q, type, perPage = 30) {
 
 function offTagToText(tag) {
   if (!tag) return null;
-  return tag.replace(/^[a-z]{2}:/, '').replace(/-/g, ' ');
+  return tag.replace(/^[a-z]{2}:/, '').replace(/-/g, ' ')
+    .replace(/\b\w/g, c => c.toUpperCase());
 }
 
 function normalizeOFFBulk(hit, requestedType) {
@@ -270,8 +271,8 @@ function normalizeOFFBulk(hit, requestedType) {
     source:               'openfoodfacts',
     external_id:          hit.code || null,
     vivino_vintage_id:    null,
-    name:                 hit.product_name.trim(),
-    producer:             (Array.isArray(hit.brands) ? hit.brands[0] : hit.brands)?.trim() || null,
+    name:                 decodeEntities(hit.product_name),
+    producer:             decodeEntities((Array.isArray(hit.brands) ? hit.brands[0] : hit.brands) || '') || null,
     country:              offTagToText(hit.countries_tags?.[0]),
     region:               null,
     type,

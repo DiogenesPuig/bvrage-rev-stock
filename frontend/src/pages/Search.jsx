@@ -1,8 +1,10 @@
-import { useState, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import Layout from '../components/Layout'
 import BeverageIcon from '../components/BeverageIcon'
 import { api } from '../services/api'
+
+const PAGE_SIZE = 20
 
 const TYPE_FILTERS = [
   { value: '',        label: 'Todos' },
@@ -13,36 +15,75 @@ const TYPE_FILTERS = [
 ]
 
 export default function Search() {
-  const navigate     = useNavigate()
-  const inputRef     = useRef(null)
+  const navigate = useNavigate()
 
-  const [query,      setQuery]      = useState('')
-  const [typeFilter, setTypeFilter] = useState('')
-  const [results,    setResults]    = useState([])
-  const [loading,    setLoading]    = useState(false)
-  const [searched,   setSearched]   = useState(false)
+  const [query,       setQuery]       = useState('')
+  const [debouncedQ,  setDebouncedQ]  = useState('')
+  const [typeFilter,  setTypeFilter]  = useState('')
+  const [results,     setResults]     = useState([])
+  const [loading,     setLoading]     = useState(true)
+  const [loadingMore, setLoadingMore] = useState(false)
+  const [hasMore,     setHasMore]     = useState(false)
+  const [viewMode,    setViewMode]    = useState('grid')
 
-  const search = async (q = query, type = typeFilter) => {
-    const trimmed = q.trim()
-    if (!trimmed) return
+  const sentinelRef = useRef(null)
+  const fetchingRef = useRef(false)
+
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedQ(query.trim()), 400)
+    return () => clearTimeout(t)
+  }, [query])
+
+  const fetchPage = useCallback(async (offset) => {
+    const params = new URLSearchParams({ limit: PAGE_SIZE, offset })
+    if (typeFilter) params.set('type', typeFilter)
+    if (debouncedQ) params.set('q', debouncedQ)
+    const data = await api.get(`/beverages/catalog?${params}`)
+    return data
+  }, [typeFilter, debouncedQ])
+
+  // Carga inicial y al cambiar filtro o búsqueda
+  useEffect(() => {
+    let cancelled = false
     setLoading(true)
-    setSearched(true)
-    try {
-      const params = new URLSearchParams({ q: trimmed })
-      if (type) params.set('type', type)
-      const data = await api.get(`/beverages/suggestions?${params}`)
-      setResults(data)
-    } catch {
-      setResults([])
-    } finally {
-      setLoading(false)
-    }
-  }
+    fetchPage(0)
+      .then(data => {
+        if (cancelled) return
+        setResults(data)
+        setHasMore(data.length === PAGE_SIZE)
+      })
+      .catch(() => !cancelled && setResults([]))
+      .finally(() => !cancelled && setLoading(false))
+    return () => { cancelled = true }
+  }, [fetchPage])
 
-  const handleTypeChange = (t) => {
-    setTypeFilter(t)
-    if (query.trim()) search(query, t)
-  }
+  // Infinite scroll: cargar más cuando el sentinel entra en viewport
+  const loadMore = useCallback(async () => {
+    if (fetchingRef.current || !hasMore) return
+    fetchingRef.current = true
+    setLoadingMore(true)
+    try {
+      const data = await fetchPage(results.length)
+      setResults(prev => prev.concat(data))
+      setHasMore(data.length === PAGE_SIZE)
+    } catch {
+      setHasMore(false)
+    } finally {
+      fetchingRef.current = false
+      setLoadingMore(false)
+    }
+  }, [fetchPage, results.length, hasMore])
+
+  useEffect(() => {
+    const el = sentinelRef.current
+    if (!el || !hasMore) return
+    const observer = new IntersectionObserver(
+      entries => entries[0].isIntersecting && loadMore(),
+      { rootMargin: '200px' }
+    )
+    observer.observe(el)
+    return () => observer.disconnect()
+  }, [loadMore, hasMore])
 
   const handleSelect = (item) => {
     const prefill = {
@@ -65,36 +106,33 @@ export default function Search() {
 
   return (
     <Layout title="Buscar bebida">
-      <div className="max-w-2xl px-4 md:px-8 py-6 space-y-4">
+      <div className="px-4 md:px-8 py-6 space-y-4 max-w-4xl">
 
-        {/* Buscador */}
+        {/* Buscador + toggle de vista */}
         <div className="flex gap-2">
           <input
-            ref={inputRef}
             type="search"
             value={query}
             onChange={e => setQuery(e.target.value)}
-            onKeyDown={e => e.key === 'Enter' && search()}
             placeholder="Nombre o productor..."
-            autoFocus
             className="flex-1 bg-zinc-900 border border-zinc-800 rounded-xl px-4 py-2.5 text-zinc-100 placeholder-zinc-600 text-sm focus:outline-none focus:border-zinc-700 transition-colors"
           />
           <button
-            onClick={() => search()}
-            disabled={!query.trim()}
-            className="px-4 bg-zinc-100 text-zinc-900 rounded-xl font-medium text-sm hover:bg-white transition-colors disabled:opacity-40"
+            onClick={() => setViewMode(m => m === 'grid' ? 'list' : 'grid')}
+            title={viewMode === 'grid' ? 'Cambiar a lista' : 'Cambiar a grilla'}
+            className="shrink-0 w-10 h-10 flex items-center justify-center bg-zinc-900 border border-zinc-800 rounded-xl text-zinc-400 hover:text-zinc-200 hover:border-zinc-700 transition-colors"
           >
-            Buscar
+            {viewMode === 'grid' ? <ListIcon /> : <GridIcon />}
           </button>
         </div>
 
         {/* Filtro por tipo */}
-        <div className="flex gap-2 flex-wrap">
+        <div className="flex gap-2 overflow-x-auto pb-1 no-scrollbar">
           {TYPE_FILTERS.map(f => (
             <button
               key={f.value}
-              onClick={() => handleTypeChange(f.value)}
-              className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
+              onClick={() => setTypeFilter(f.value)}
+              className={`shrink-0 px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
                 typeFilter === f.value
                   ? 'bg-zinc-100 text-zinc-900'
                   : 'bg-zinc-800 text-zinc-400 hover:text-zinc-200'
@@ -107,15 +145,15 @@ export default function Search() {
 
         {/* Resultados */}
         {loading && (
-          <div className="flex justify-center py-10">
-            <div className="w-5 h-5 border-2 border-zinc-700 border-t-zinc-400 rounded-full animate-spin" />
+          <div className="flex justify-center py-16">
+            <div className="w-6 h-6 border-2 border-zinc-700 border-t-zinc-400 rounded-full animate-spin" />
           </div>
         )}
 
-        {!loading && searched && results.length === 0 && (
+        {!loading && results.length === 0 && (
           <div className="py-10 text-center space-y-3">
             <p className="text-sm text-zinc-500">
-              Sin resultados para "{query}"
+              {debouncedQ ? `Sin resultados para "${debouncedQ}"` : 'No hay bebidas en esta categoría'}
             </p>
             <button
               onClick={handleCreateManual}
@@ -127,12 +165,30 @@ export default function Search() {
         )}
 
         {!loading && results.length > 0 && (
-          <div className="space-y-2">
-            {results.map((item, i) => (
-              <ResultCard key={i} item={item} onSelect={() => handleSelect(item)} />
-            ))}
+          <>
+            {viewMode === 'grid' ? (
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+                {results.map((item) => (
+                  <ResultGridCard key={item.id} item={item} onSelect={() => handleSelect(item)} />
+                ))}
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {results.map((item) => (
+                  <ResultListCard key={item.id} item={item} onSelect={() => handleSelect(item)} />
+                ))}
+              </div>
+            )}
 
-            {/* Siempre ofrecemos crear manual al final */}
+            {/* Sentinel del infinite scroll */}
+            {hasMore && (
+              <div ref={sentinelRef} className="flex justify-center py-6">
+                {loadingMore && (
+                  <div className="w-5 h-5 border-2 border-zinc-700 border-t-zinc-400 rounded-full animate-spin" />
+                )}
+              </div>
+            )}
+
             <div className="pt-2 text-center">
               <button
                 onClick={handleCreateManual}
@@ -141,20 +197,44 @@ export default function Search() {
                 ¿No encontraste lo que buscabas? Crear manualmente
               </button>
             </div>
-          </div>
-        )}
-
-        {!searched && (
-          <p className="text-sm text-zinc-600 text-center py-10">
-            Buscá una bebida del catálogo para agregarla a tu bodega con los datos pre-llenados
-          </p>
+          </>
         )}
       </div>
     </Layout>
   )
 }
 
-function ResultCard({ item, onSelect }) {
+function ResultGridCard({ item, onSelect }) {
+  return (
+    <button
+      onClick={onSelect}
+      className="bg-zinc-900 rounded-xl p-3 flex flex-col items-center gap-2 text-left hover:bg-zinc-800 transition-colors border border-zinc-800 hover:border-zinc-700"
+    >
+      <BeverageIcon
+        type={item.type}
+        grape_variety={item.grape_variety}
+        image_url={item.image_url}
+        size={60}
+      />
+      <div className="w-full text-center">
+        <p className="text-sm font-medium text-zinc-100 leading-tight line-clamp-2">{item.name}</p>
+        {(item.producer || item.country) && (
+          <p className="text-xs text-zinc-600 mt-0.5 truncate">
+            {[item.producer, item.country].filter(Boolean).join(' · ')}
+          </p>
+        )}
+      </div>
+      <div className="flex items-center justify-between w-full mt-auto pt-1 border-t border-zinc-800">
+        {item.vivino_rating
+          ? <span className="text-xs text-amber-400">★ {Number(item.vivino_rating).toFixed(1)}</span>
+          : <span />}
+        <span className="text-xs font-medium text-zinc-300">+ Agregar</span>
+      </div>
+    </button>
+  )
+}
+
+function ResultListCard({ item, onSelect }) {
   return (
     <div className="bg-zinc-900 rounded-xl p-3 flex gap-3 items-center border border-zinc-800 hover:border-zinc-700 transition-colors">
       <BeverageIcon
@@ -179,9 +259,6 @@ function ResultCard({ item, onSelect }) {
         {item.grape_variety && (
           <p className="text-xs text-zinc-600 mt-0.5 truncate">{item.grape_variety}</p>
         )}
-        {item.alcohol_pct && (
-          <p className="text-xs text-zinc-600 mt-0.5">{item.alcohol_pct}% alc.</p>
-        )}
       </div>
 
       <button
@@ -191,5 +268,23 @@ function ResultCard({ item, onSelect }) {
         + Agregar
       </button>
     </div>
+  )
+}
+
+function GridIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/>
+      <rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/>
+    </svg>
+  )
+}
+
+function ListIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/>
+      <circle cx="3" cy="6" r="1" fill="currentColor"/><circle cx="3" cy="12" r="1" fill="currentColor"/><circle cx="3" cy="18" r="1" fill="currentColor"/>
+    </svg>
   )
 }
