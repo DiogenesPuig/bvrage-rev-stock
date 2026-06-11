@@ -288,6 +288,35 @@ Con `vite-plugin-pwa` el frontend se convierte en una Progressive Web App:
 - [ ] Rating promedio de la comunidad en la ficha de cada vino
 
 ### Fase 5 – Pulido y features extra
+
+**Bugs detectados (auditoría 2026-06-11):**
+- [ ] `POST /auth/refresh` regenera tokens sin `isAdmin` → el admin pierde
+      permisos a los 15 min de sesión (auth.js, `generateTokens(payload.userId)`)
+- [ ] Transferencias fantasma: el form ofrece "Transferencia" pero el backend
+      la trata como ingreso — suma stock en destino sin restar del origen
+      (movements.js). Necesita location_from/location_to en una transacción
+- [ ] Consumos sin tope: se puede consumir más stock del disponible y el
+      inventario queda negativo (movements.js no valida cantidad)
+- [ ] Íconos PWA rotos: el manifest referencia `/icons/icon-192.png` y
+      `icon-512.png` pero `public/` solo tiene SVGs → instalación sin ícono
+
+**Robustez:**
+- [ ] Rate limiting en `/auth/login` y `/auth/register` (express-rate-limit)
+- [ ] `GET /api/beverages/:id` con id no numérico devuelve 500 (error pg) en vez de 400
+- [ ] Restringir CORS por origin en producción (hoy `cors()` abierto)
+- [ ] Paginación en `GET /api/reviews` (hoy sin límite)
+- [ ] Validar rango de `rating` (1-5) en reviews y beverages
+- [ ] Logout no revoca el refresh token (válido 7 días después) — evaluar tabla de tokens
+
+**Código:**
+- [ ] ESLint frontend: 7 errores (setState-en-effect en 4 páginas, `qty` sin
+      usar en BeverageDetail, catch vacío y export mixto en AuthContext)
+- [ ] Backend sin linter ni tests
+- [ ] Dedup del catálogo por matching difuso: variantes con tipeos distintos
+      ("Red label." vs "Red Label", "Jhonnie walker") siguen como filas
+      separadas — evaluar pg_trgm / similarity() para unificarlas
+
+**Features:**
 - [ ] Filtros avanzados y búsqueda en la colección
 - [ ] Alertas de stock bajo ("solo te queda 1 botella")
 - [ ] Estadísticas: valor total de la colección, botellas por tipo, consumo mensual

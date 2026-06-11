@@ -29,6 +29,7 @@ App para gestionar una colección personal de bebidas alcohólicas. Multi-usuari
   - Search.jsx: navegación por categoría con grilla/lista e infinite scroll, pre-fill al agregar
 - [x] **Fase 4 – Sección comunitaria** (Community.jsx + reviews)
 - [ ] **Fase 5 – Pulido** ← PRÓXIMO PASO
+  - Dedup difuso del catálogo (variantes con tipeos: "Red label." vs "Red Label" — pg_trgm)
   - Filtros avanzados en la colección, alertas de stock bajo, estadísticas, exportar CSV, escaneo de etiquetas, ocasión de consumo
 
 Ver `PLAN.md` para arquitectura completa, modelo de datos y decisiones de diseño.
