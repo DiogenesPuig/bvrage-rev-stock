@@ -4,6 +4,7 @@ import Layout from '../components/Layout'
 import BeverageCard from '../components/BeverageCard'
 import BeverageIcon from '../components/BeverageIcon'
 import BeverageForm from '../components/BeverageForm'
+import LocationsPanel from '../components/LocationsPanel'
 import { api } from '../services/api'
 
 const TYPES = ['wine', 'beer', 'spirits', 'other']
@@ -14,6 +15,7 @@ export default function Collection() {
   const location = useLocation()
   const navigate  = useNavigate()
 
+  const [tab,           setTab]         = useState('bebidas')
   const [beverages,    setBeverages]    = useState([])
   const [loading,      setLoading]      = useState(true)
   const [error,        setError]        = useState('')
@@ -65,9 +67,18 @@ export default function Collection() {
   }
 
   const handleAdd = async (formData) => {
+    const { initial_location_id, initial_quantity, ...beverageData } = formData
     setSaving(true)
     try {
-      await api.post('/beverages', formData)
+      const beverage = await api.post('/beverages', beverageData)
+      if (initial_quantity > 0) {
+        await api.post('/movements', {
+          beverage_id: beverage.id,
+          location_id: initial_location_id,
+          type: 'purchase',
+          quantity: initial_quantity,
+        })
+      }
       setShowForm(false)
       fetchBeverages()
     } catch (err) {
@@ -85,88 +96,101 @@ export default function Collection() {
 
   return (
     <Layout title="Mi Bodega">
-      <div className="px-4 md:px-8 pt-4 pb-2 space-y-3 max-w-4xl">
-        <div className="flex gap-2">
-          <input
-            type="search"
-            placeholder="Buscar por nombre o productor..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="flex-1 bg-zinc-900 border border-zinc-800 rounded-xl px-4 py-2.5 text-zinc-100 placeholder-zinc-600 text-sm focus:outline-none focus:border-zinc-700 transition-colors"
-          />
-          <button
-            onClick={toggleView}
-            title={effectiveMode === 'grid' ? 'Cambiar a lista' : 'Cambiar a grilla'}
-            className="shrink-0 w-10 h-10 flex items-center justify-center bg-zinc-900 border border-zinc-800 rounded-xl text-zinc-400 hover:text-zinc-200 hover:border-zinc-700 transition-colors"
-          >
-            {effectiveMode === 'grid' ? <ListIcon /> : <GridIcon />}
-          </button>
-        </div>
-
-        <div className="flex gap-2 overflow-x-auto pb-1 no-scrollbar">
-          <FilterChip active={!typeFilter} onClick={() => setTypeFilter('')}>Todos</FilterChip>
-          {TYPES.map((t) => (
-            <FilterChip key={t} active={typeFilter === t} onClick={() => setTypeFilter(t === typeFilter ? '' : t)}>
-              {TYPE_LABELS[t]}
-            </FilterChip>
-          ))}
+      <div className="px-4 md:px-8 pt-4">
+        <div className="flex gap-2 border-b border-border-soft">
+          <TabButton active={tab === 'bebidas'} onClick={() => setTab('bebidas')}>Bebidas</TabButton>
+          <TabButton active={tab === 'ubicaciones'} onClick={() => setTab('ubicaciones')}>Ubicaciones</TabButton>
         </div>
       </div>
 
-      {loading && (
-        <div className="flex justify-center py-16">
-          <div className="w-6 h-6 border-2 border-zinc-700 border-t-zinc-400 rounded-full animate-spin" />
-        </div>
-      )}
-
-      {error && <p className="text-center text-sm text-red-400 py-8">{error}</p>}
-
-      {!loading && !error && (
+      {tab === 'ubicaciones' ? (
+        <LocationsPanel />
+      ) : (
         <>
-          {beverages.length > 0 && (
-            <p className="px-4 md:px-8 py-2 text-xs text-zinc-600">
-              {beverages.length} {beverages.length === 1 ? 'bebida' : 'bebidas'} · {totalBottles} {totalBottles === 1 ? 'botella' : 'botellas'}
-            </p>
+          <div className="px-4 md:px-8 pt-4 pb-2 space-y-3">
+            <div className="flex gap-2">
+              <input
+                type="search"
+                placeholder="Buscar por nombre o productor..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="field flex-1 rounded-xl px-4 py-2.5"
+              />
+              <button
+                onClick={toggleView}
+                title={effectiveMode === 'grid' ? 'Cambiar a lista' : 'Cambiar a grilla'}
+                className="shrink-0 w-10 h-10 flex items-center justify-center bg-surface border border-border rounded-xl text-ink-soft hover:text-gold hover:border-gold/40 transition-colors"
+              >
+                {effectiveMode === 'grid' ? <ListIcon /> : <GridIcon />}
+              </button>
+            </div>
+
+            <div className="flex gap-2 overflow-x-auto pb-1 no-scrollbar">
+              <FilterChip active={!typeFilter} onClick={() => setTypeFilter('')}>Todos</FilterChip>
+              {TYPES.map((t) => (
+                <FilterChip key={t} active={typeFilter === t} onClick={() => setTypeFilter(t === typeFilter ? '' : t)}>
+                  {TYPE_LABELS[t]}
+                </FilterChip>
+              ))}
+            </div>
+          </div>
+
+          {loading && (
+            <div className="flex justify-center py-16">
+              <div className="w-6 h-6 border-2 border-border border-t-gold rounded-full animate-spin" />
+            </div>
           )}
 
-          {effectiveMode === 'grid' ? (
-            <div className="px-4 md:px-8 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 max-w-4xl">
-              {beverages.map((b) => <BeverageGridCard key={b.id} beverage={b} />)}
-            </div>
-          ) : (
-            <div className="max-w-4xl md:px-4">
-              {beverages.map((b) => <BeverageCard key={b.id} beverage={b} />)}
-            </div>
+          {error && <p className="text-center text-sm text-red-400 py-8">{error}</p>}
+
+          {!loading && !error && (
+            <>
+              {beverages.length > 0 && (
+                <p className="px-4 md:px-8 py-2 text-xs text-muted">
+                  {beverages.length} {beverages.length === 1 ? 'bebida' : 'bebidas'} · {totalBottles} {totalBottles === 1 ? 'botella' : 'botellas'}
+                </p>
+              )}
+
+              {effectiveMode === 'grid' ? (
+                <div className="px-4 md:px-8 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+                  {beverages.map((b) => <BeverageGridCard key={b.id} beverage={b} />)}
+                </div>
+              ) : (
+                <div className="md:px-4">
+                  {beverages.map((b) => <BeverageCard key={b.id} beverage={b} />)}
+                </div>
+              )}
+
+              {beverages.length === 0 && (
+                <div className="flex flex-col items-center justify-center py-20 text-center px-6">
+                  <p className="text-ink-soft font-medium mb-1">
+                    {search || typeFilter ? 'Sin resultados' : 'Tu bodega está vacía'}
+                  </p>
+                  <p className="text-sm text-muted">
+                    {search || typeFilter ? 'Probá con otros filtros' : 'Agregá tu primera bebida con el botón +'}
+                  </p>
+                </div>
+              )}
+            </>
           )}
 
-          {beverages.length === 0 && (
-            <div className="flex flex-col items-center justify-center py-20 text-center px-6">
-              <p className="text-zinc-400 font-medium mb-1">
-                {search || typeFilter ? 'Sin resultados' : 'Tu bodega está vacía'}
-              </p>
-              <p className="text-sm text-zinc-600">
-                {search || typeFilter ? 'Probá con otros filtros' : 'Agregá tu primera bebida con el botón +'}
-              </p>
-            </div>
+          <button
+            onClick={() => setShowForm(true)}
+            className="fixed bottom-20 right-4 md:bottom-8 md:right-8 w-14 h-14 bg-gold text-[#402d00] rounded-full shadow-lg flex items-center justify-center text-2xl font-light hover:bg-gold-hover transition-colors z-20"
+            aria-label="Agregar bebida"
+          >
+            +
+          </button>
+
+          {showForm && (
+            <BeverageForm
+              initial={prefillData}
+              onSave={handleAdd}
+              onClose={() => { setShowForm(false); setPrefillData(null) }}
+              loading={saving}
+            />
           )}
         </>
-      )}
-
-      <button
-        onClick={() => setShowForm(true)}
-        className="fixed bottom-20 right-4 md:bottom-8 md:right-8 w-14 h-14 bg-zinc-100 text-zinc-900 rounded-full shadow-lg flex items-center justify-center text-2xl font-light hover:bg-white transition-colors z-20"
-        aria-label="Agregar bebida"
-      >
-        +
-      </button>
-
-      {showForm && (
-        <BeverageForm
-          initial={prefillData}
-          onSave={handleAdd}
-          onClose={() => { setShowForm(false); setPrefillData(null) }}
-          loading={saving}
-        />
       )}
     </Layout>
   )
@@ -177,24 +201,37 @@ function BeverageGridCard({ beverage }) {
   return (
     <Link
       to={`/beverages/${id}`}
-      className="bg-zinc-900 rounded-xl p-3 flex flex-col items-center gap-2 hover:bg-zinc-800 transition-colors border border-zinc-800 hover:border-zinc-700"
+      className="card p-3 flex flex-col items-center gap-2 hover:border-gold/30 transition-colors"
     >
       <BeverageIcon type={type} grape_variety={grape_variety} image_url={image_url} size={60} />
       <div className="w-full text-center">
-        <p className="text-sm font-medium text-zinc-100 leading-tight line-clamp-2">{name}</p>
+        <p className="text-sm font-medium text-ink leading-tight line-clamp-2">{name}</p>
         {(producer || vintage) && (
-          <p className="text-xs text-zinc-600 mt-0.5 truncate">
+          <p className="text-xs text-muted mt-0.5 truncate">
             {[producer, vintage].filter(Boolean).join(' · ')}
           </p>
         )}
       </div>
-      <div className="flex items-center justify-between w-full mt-auto pt-1 border-t border-zinc-800">
-        <span className="text-xs text-zinc-600">{TYPE_LABELS[type] ?? type}</span>
-        <span className="text-sm font-semibold text-zinc-100">
-          {total_stock}<span className="text-xs text-zinc-600 font-normal ml-0.5">u.</span>
+      <div className="flex items-center justify-between w-full mt-auto pt-1 border-t border-border-soft">
+        <span className="text-xs text-muted">{TYPE_LABELS[type] ?? type}</span>
+        <span className="font-serif text-gold text-sm">
+          {total_stock}<span className="text-xs text-muted font-sans ml-0.5">u.</span>
         </span>
       </div>
     </Link>
+  )
+}
+
+function TabButton({ active, onClick, children }) {
+  return (
+    <button
+      onClick={onClick}
+      className={`px-1 pb-3 text-sm border-b-2 -mb-px transition-colors ${
+        active ? 'border-gold text-gold font-medium' : 'border-transparent text-ink-soft hover:text-ink'
+      }`}
+    >
+      {children}
+    </button>
   )
 }
 
@@ -203,7 +240,7 @@ function FilterChip({ active, onClick, children }) {
     <button
       onClick={onClick}
       className={`shrink-0 px-3 py-1 rounded-full text-sm transition-colors ${
-        active ? 'bg-zinc-100 text-zinc-900 font-medium' : 'bg-zinc-800 text-zinc-400 hover:text-zinc-200'
+        active ? 'bg-gold text-[#402d00] font-medium' : 'bg-chip text-ink-soft hover:text-ink'
       }`}
     >
       {children}

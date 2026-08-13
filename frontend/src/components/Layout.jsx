@@ -2,11 +2,9 @@ import { NavLink, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 
 const navItems = [
-  { to: '/',           label: 'Inicio',    icon: HomeIcon },
+  { to: '/',           label: 'Comunidad', icon: StarIcon },
   { to: '/collection', label: 'Mi Bodega', icon: BottleIcon },
-  { to: '/search',     label: 'Buscar',    icon: SearchIcon },
-  { to: '/locations',  label: 'Lugares',   icon: LocationIcon },
-  { to: '/community',  label: 'Comunidad', icon: StarIcon },
+  { to: '/activity',   label: 'Actividad', icon: ActivityIcon },
 ]
 
 export default function Layout({ children, title }) {
@@ -19,72 +17,63 @@ export default function Layout({ children, title }) {
   }
 
   return (
-    <div className="min-h-screen bg-zinc-950 flex">
+    <div className="min-h-screen bg-canvas flex flex-col">
 
-      {/* Sidebar — desktop */}
-      <aside className="hidden md:flex flex-col w-60 shrink-0 border-r border-zinc-800 fixed inset-y-0 left-0">
-        <div className="px-6 py-5 border-b border-zinc-800">
-          <span className="font-semibold text-zinc-100 text-lg tracking-tight">CaveBin</span>
-        </div>
+      {/* Header — desktop */}
+      <header className="hidden md:flex items-center justify-between h-20 px-8 border-b border-border-soft sticky top-0 bg-header backdrop-blur-xl z-20">
+        <span className="font-serif text-gold text-xl">CaveBin</span>
 
-        <nav className="flex-1 px-3 py-4 space-y-1">
-          {navItems.map(({ to, label, icon: Icon }) => (
+        <nav className="flex items-center gap-8">
+          {navItems.map(({ to, label }) => (
             <NavLink
               key={to}
               to={to}
               end={to === '/'}
               className={({ isActive }) =>
-                `flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors ${
-                  isActive
-                    ? 'bg-zinc-800 text-zinc-100 font-medium'
-                    : 'text-zinc-500 hover:text-zinc-300 hover:bg-zinc-900'
+                `text-xs uppercase tracking-widest transition-colors ${
+                  isActive ? 'text-gold' : 'text-ink-soft hover:text-ink'
                 }`
               }
             >
-              <Icon />
               {label}
             </NavLink>
           ))}
         </nav>
 
-        <div className="px-4 py-4 border-t border-zinc-800">
-          <button
-            onClick={handleLogout}
-            className="w-full text-left text-sm text-zinc-500 hover:text-zinc-300 transition-colors px-3 py-2"
-          >
-            Cerrar sesión
-          </button>
+        <button
+          onClick={handleLogout}
+          className="border border-border text-ink-soft text-xs uppercase tracking-widest px-4 py-2 hover:border-gold/40 hover:text-gold transition-colors"
+        >
+          Cerrar sesión
+        </button>
+      </header>
+
+      {/* Header — mobile only */}
+      <header className="md:hidden flex items-center justify-between px-4 py-3 border-b border-border-soft sticky top-0 bg-header backdrop-blur-xl z-20">
+        <span className="font-serif text-gold">{title || 'CaveBin'}</span>
+        <button
+          onClick={handleLogout}
+          className="text-sm text-muted hover:text-ink-soft transition-colors"
+        >
+          Salir
+        </button>
+      </header>
+
+      {/* Page title — desktop */}
+      {title && (
+        <div className="hidden md:block px-8 py-6 border-b border-border-soft">
+          <h1 className="text-xl">{title}</h1>
         </div>
-      </aside>
+      )}
 
-      {/* Content area */}
-      <div className="flex-1 flex flex-col min-h-screen md:ml-60">
-
-        {/* Header — mobile only */}
-        <header className="md:hidden flex items-center justify-between px-4 py-3 border-b border-zinc-800 sticky top-0 bg-zinc-950 z-10">
-          <span className="font-semibold text-zinc-100">{title || 'CaveBin'}</span>
-          <button
-            onClick={handleLogout}
-            className="text-sm text-zinc-500 hover:text-zinc-300 transition-colors"
-          >
-            Salir
-          </button>
-        </header>
-
-        {/* Page title — desktop */}
-        {title && (
-          <div className="hidden md:block px-8 py-6 border-b border-zinc-800">
-            <h1 className="text-xl font-semibold text-zinc-100">{title}</h1>
-          </div>
-        )}
-
-        <main className="flex-1 pb-20 md:pb-0">
+      <main className="flex-1 pb-20 md:pb-0">
+        <div className="max-w-6xl mx-auto w-full">
           {children}
-        </main>
-      </div>
+        </div>
+      </main>
 
       {/* Bottom nav — mobile only */}
-      <nav className="md:hidden fixed bottom-0 inset-x-0 bg-zinc-900 border-t border-zinc-800 flex z-10">
+      <nav className="md:hidden fixed bottom-0 inset-x-0 bg-header backdrop-blur-xl border-t border-border-soft flex z-10">
         {navItems.map(({ to, label, icon: Icon }) => (
           <NavLink
             key={to}
@@ -92,7 +81,7 @@ export default function Layout({ children, title }) {
             end={to === '/'}
             className={({ isActive }) =>
               `flex-1 flex flex-col items-center gap-1 py-3 text-xs transition-colors ${
-                isActive ? 'text-zinc-100' : 'text-zinc-500 hover:text-zinc-300'
+                isActive ? 'text-gold' : 'text-muted hover:text-ink-soft'
               }`
             }
           >
@@ -105,25 +94,6 @@ export default function Layout({ children, title }) {
   )
 }
 
-function SearchIcon() {
-  return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-      <circle cx="11" cy="11" r="7"/>
-      <line x1="16.5" y1="16.5" x2="22" y2="22"/>
-    </svg>
-  )
-}
-
-function HomeIcon() {
-  return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M3 12L12 3l9 9"/>
-      <path d="M9 21V12h6v9"/>
-      <path d="M3 12v9h18v-9"/>
-    </svg>
-  )
-}
-
 function BottleIcon() {
   return (
     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
@@ -133,19 +103,19 @@ function BottleIcon() {
   )
 }
 
-function LocationIcon() {
-  return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M12 2a7 7 0 0 1 7 7c0 5-7 13-7 13S5 14 5 9a7 7 0 0 1 7-7z"/>
-      <circle cx="12" cy="9" r="2.5"/>
-    </svg>
-  )
-}
-
 function StarIcon() {
   return (
     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
       <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+    </svg>
+  )
+}
+
+function ActivityIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="12" cy="12" r="9"/>
+      <path d="M12 7v5l3 3"/>
     </svg>
   )
 }

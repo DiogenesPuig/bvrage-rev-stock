@@ -31,16 +31,17 @@ export default function Register() {
   }
 
   return (
-    <div className="min-h-screen bg-zinc-950 flex items-center justify-center px-4">
-      <div className="w-full max-w-sm">
-        <h1 className="text-2xl font-semibold text-zinc-100 text-center mb-8">
-          CaveBin
-        </h1>
+    <div className="min-h-screen bg-canvas flex items-center justify-center px-4">
+      <div className="w-full max-w-sm card border-t border-t-gold/15 px-8 py-10">
+        <div className="text-center mb-8">
+          <h1 className="font-serif text-gold text-2xl mb-1.5">CaveBin</h1>
+          <p className="text-ink-soft text-sm">Creá tu cuenta para armar tu bodega</p>
+        </div>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-5">
           <div>
-            <label className="block text-sm text-zinc-400 mb-1" htmlFor="displayName">
-              Nombre <span className="text-zinc-600">(opcional)</span>
+            <label className="label-caps block mb-1.5" htmlFor="displayName">
+              Nombre <span className="text-muted normal-case">(opcional)</span>
             </label>
             <input
               id="displayName"
@@ -49,13 +50,13 @@ export default function Register() {
               autoComplete="name"
               value={form.displayName}
               onChange={handleChange}
-              className="w-full bg-zinc-900 border border-zinc-800 rounded-lg px-4 py-2.5 text-zinc-100 placeholder-zinc-600 focus:outline-none focus:border-zinc-600 transition-colors"
+              className="field-underline"
               placeholder="Tu nombre"
             />
           </div>
 
           <div>
-            <label className="block text-sm text-zinc-400 mb-1" htmlFor="email">
+            <label className="label-caps block mb-1.5" htmlFor="email">
               Email
             </label>
             <input
@@ -66,13 +67,13 @@ export default function Register() {
               required
               value={form.email}
               onChange={handleChange}
-              className="w-full bg-zinc-900 border border-zinc-800 rounded-lg px-4 py-2.5 text-zinc-100 placeholder-zinc-600 focus:outline-none focus:border-zinc-600 transition-colors"
+              className="field-underline"
               placeholder="tu@email.com"
             />
           </div>
 
           <div>
-            <label className="block text-sm text-zinc-400 mb-1" htmlFor="password">
+            <label className="label-caps block mb-1.5" htmlFor="password">
               Contraseña
             </label>
             <input
@@ -83,7 +84,7 @@ export default function Register() {
               required
               value={form.password}
               onChange={handleChange}
-              className="w-full bg-zinc-900 border border-zinc-800 rounded-lg px-4 py-2.5 text-zinc-100 placeholder-zinc-600 focus:outline-none focus:border-zinc-600 transition-colors"
+              className="field-underline"
               placeholder="Mínimo 8 caracteres"
             />
           </div>
@@ -92,18 +93,14 @@ export default function Register() {
             <p className="text-sm text-red-400">{error}</p>
           )}
 
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full bg-zinc-100 text-zinc-900 font-medium rounded-lg py-2.5 hover:bg-white transition-colors disabled:opacity-50"
-          >
+          <button type="submit" disabled={loading} className="btn-primary mt-2">
             {loading ? 'Creando cuenta...' : 'Crear cuenta'}
           </button>
         </form>
 
-        <p className="text-center text-sm text-zinc-500 mt-6">
+        <p className="text-center text-sm text-muted mt-6">
           ¿Ya tenés cuenta?{' '}
-          <Link to="/login" className="text-zinc-300 hover:text-white transition-colors">
+          <Link to="/login" className="text-gold hover:text-gold-hover transition-colors">
             Iniciá sesión
           </Link>
         </p>

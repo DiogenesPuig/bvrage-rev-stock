@@ -22,3 +22,6 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Mockup de referencia visual (Stitch), no forma parte del código de la app
+/Stitch Sip Stock Manager/

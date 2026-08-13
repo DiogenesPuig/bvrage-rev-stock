@@ -37,10 +37,10 @@ export default function MovementForm({ beverageId, onSave, onClose, loading }) {
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center">
       <div className="absolute inset-0 bg-black/60" onClick={onClose} />
 
-      <div className="relative w-full max-w-lg bg-zinc-900 rounded-t-2xl sm:rounded-2xl max-h-[90dvh] flex flex-col">
-        <div className="flex items-center justify-between px-4 py-4 border-b border-zinc-800">
-          <h2 className="font-semibold text-zinc-100">Registrar movimiento</h2>
-          <button onClick={onClose} className="text-zinc-500 hover:text-zinc-300 transition-colors">
+      <div className="relative w-full max-w-lg bg-surface border-t border-t-gold/15 rounded-t-2xl sm:rounded-2xl max-h-[90dvh] flex flex-col">
+        <div className="flex items-center justify-between px-4 py-4 border-b border-border-soft">
+          <h2 className="font-serif text-gold text-lg">Registrar movimiento</h2>
+          <button onClick={onClose} className="text-muted hover:text-ink-soft transition-colors">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
               <path d="M18 6L6 18M6 6l12 12"/>
             </svg>
@@ -50,7 +50,7 @@ export default function MovementForm({ beverageId, onSave, onClose, loading }) {
         <form onSubmit={handleSubmit} className="overflow-y-auto p-4 space-y-4">
           {/* Tipo */}
           <div>
-            <label className="block text-xs text-zinc-400 mb-2">Tipo</label>
+            <label className="label-caps block mb-2">Tipo</label>
             <div className="flex gap-2">
               {TYPES.map(({ value, label, color }) => (
                 <button
@@ -59,8 +59,8 @@ export default function MovementForm({ beverageId, onSave, onClose, loading }) {
                   onClick={() => setForm((f) => ({ ...f, type: value }))}
                   className={`flex-1 py-2 rounded-lg text-sm font-medium transition-colors ${
                     form.type === value
-                      ? `bg-zinc-700 ${color}`
-                      : 'bg-zinc-800 text-zinc-500 hover:text-zinc-300'
+                      ? `bg-chip ${color}`
+                      : 'bg-chip/50 text-muted hover:text-ink-soft'
                   }`}
                 >
                   {label}
@@ -72,7 +72,7 @@ export default function MovementForm({ beverageId, onSave, onClose, loading }) {
           {/* Cantidad y fecha */}
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs text-zinc-400 mb-1">Cantidad *</label>
+              <label className="label-caps block mb-1">Cantidad *</label>
               <input
                 name="quantity" type="number" min="1" step="1" required
                 value={form.quantity} onChange={set}
@@ -81,7 +81,7 @@ export default function MovementForm({ beverageId, onSave, onClose, loading }) {
               />
             </div>
             <div>
-              <label className="block text-xs text-zinc-400 mb-1">Fecha</label>
+              <label className="label-caps block mb-1">Fecha</label>
               <input
                 name="date" type="date"
                 value={form.date} onChange={set}
@@ -92,7 +92,7 @@ export default function MovementForm({ beverageId, onSave, onClose, loading }) {
 
           {/* Ubicación */}
           <div>
-            <label className="block text-xs text-zinc-400 mb-1">Ubicación</label>
+            <label className="label-caps block mb-1">Ubicación</label>
             <select name="location_id" value={form.location_id} onChange={set} className="field">
               <option value="">Sin ubicación específica</option>
               {locations.map((l) => (
@@ -104,7 +104,7 @@ export default function MovementForm({ beverageId, onSave, onClose, loading }) {
           {/* Precio (solo compra) */}
           {form.type === 'purchase' && (
             <div>
-              <label className="block text-xs text-zinc-400 mb-1">Precio total</label>
+              <label className="label-caps block mb-1">Precio total</label>
               <input
                 name="price" type="number" min="0" step="0.01"
                 value={form.price} onChange={set}
@@ -117,7 +117,7 @@ export default function MovementForm({ beverageId, onSave, onClose, loading }) {
           {/* Ocasión (solo consumo) */}
           {form.type === 'consumption' && (
             <div>
-              <label className="block text-xs text-zinc-400 mb-1">Ocasión</label>
+              <label className="label-caps block mb-1">Ocasión</label>
               <input
                 name="occasion" type="text"
                 value={form.occasion} onChange={set}
@@ -129,7 +129,7 @@ export default function MovementForm({ beverageId, onSave, onClose, loading }) {
 
           {/* Notas */}
           <div>
-            <label className="block text-xs text-zinc-400 mb-1">Notas</label>
+            <label className="label-caps block mb-1">Notas</label>
             <textarea
               name="notes" rows={2}
               value={form.notes} onChange={set}
@@ -141,7 +141,7 @@ export default function MovementForm({ beverageId, onSave, onClose, loading }) {
           <button
             type="submit"
             disabled={loading || !form.quantity}
-            className="w-full bg-zinc-100 text-zinc-900 font-medium rounded-lg py-2.5 hover:bg-white transition-colors disabled:opacity-50"
+            className="btn-primary rounded-lg"
           >
             {loading ? 'Guardando...' : 'Registrar'}
           </button>

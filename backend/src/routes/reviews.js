@@ -12,8 +12,8 @@ router.get('/featured', async (req, res) => {
          beverage_ref,
          COUNT(*)::int                          AS review_count,
          ROUND(AVG(rating) FILTER (WHERE rating IS NOT NULL), 1) AS avg_rating,
-         MAX(created_at)                        AS last_reviewed_at,
-         (ARRAY_AGG(body ORDER BY created_at DESC) FILTER (WHERE body IS NOT NULL))[1] AS latest_body,
+         MAX(r.created_at)                      AS last_reviewed_at,
+         (ARRAY_AGG(body ORDER BY r.created_at DESC) FILTER (WHERE body IS NOT NULL))[1] AS latest_body,
          (ARRAY_AGG(u.display_name ORDER BY r.created_at DESC))[1] AS latest_author
        FROM reviews r
        JOIN users u ON u.id = r.user_id

@@ -79,6 +79,25 @@ router.get('/catalog', async (req, res) => {
   }
 });
 
+// GET /api/beverages/catalog/:id — un ítem puntual del catálogo (no de mi colección)
+router.get('/catalog/:id', async (req, res) => {
+  try {
+    const result = await query(
+      `SELECT id, name, producer, type, country, region, grape_variety,
+              NULL AS alcohol_pct, image_url, external_url,
+              vivino_rating, vivino_ratings_count
+       FROM beverage_catalog
+       WHERE id = $1`,
+      [req.params.id]
+    );
+    if (!result.rows[0]) return res.status(404).json({ error: 'No encontrado en el catálogo' });
+    res.json(result.rows[0]);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Error del servidor' });
+  }
+});
+
 // GET /api/beverages
 router.get('/', async (req, res) => {
   try {

@@ -52,7 +52,7 @@ export default function BeverageIcon({ type, grape_variety, image_url, size = 48
       <img
         src={image_url}
         alt=""
-        className="rounded-xl object-cover shrink-0 border border-zinc-800"
+        className="rounded-xl object-cover shrink-0 border border-border"
         style={{ width: size, height: size }}
       />
     )

@@ -21,15 +21,25 @@ App para gestionar una colección personal de bebidas alcohólicas. Multi-usuari
 
 - [x] **Fase 2 – Frontend + PWA**
   - React + Vite + Tailwind + vite-plugin-pwa
-  - Páginas: Login, Register, Collection (bodega, grilla/lista), BeverageDetail, Locations, Community, Search, Home
+  - Páginas: Login, Register, Collection (bodega, con tab de Ubicaciones), BeverageDetail, Home
 - [x] **Fase 3 – Catálogo + fuentes externas** (sin Puppeteer)
   - `beverage_catalog` (~3.100 ítems): vinos, cervezas y destilados
   - Fuentes: Vivino (API explore con filtros + scraping HTML para texto) y Open Food Facts (search-a-licious por categoría)
-  - Script CLI `backend/scripts/populate-catalog.js`; búsqueda en la app solo contra el catálogo local
-  - Search.jsx: navegación por categoría con grilla/lista e infinite scroll, pre-fill al agregar
-- [x] **Fase 4 – Sección comunitaria** (Community.jsx + reviews)
+  - Script CLI `backend/scripts/populate-catalog.js`
+- [x] **Fase 4 – Sección comunitaria**
+  - Home.jsx: catálogo navegable (grilla/lista, infinite scroll, búsqueda en vivo) fusionado con reseñas destacadas — es la pantalla principal ("/") para usuarios logueados
+  - CatalogDetail.jsx: ficha de un ítem del catálogo (no de la colección propia) con reseñas y alta directa
+- [x] **Reskin visual "Vintner & Cask"** (Parte 1: tokens de diseño + aplicado a todas las páginas)
+- [x] **Pantalla "Actividad"** — Activity.jsx en `/activity`, timeline de todos los movimientos
+  (no solo por bebida), agrupado por fecha (Hoy/Ayer/fecha), con filtro por tipo
+  (Compra/Consumo/Transferencia) e infinite scroll. Backend: `GET /api/movements`
+  (nuevo, en `movements.js`) con paginación y filtro `type`.
 - [ ] **Fase 5 – Pulido** ← PRÓXIMO PASO
-  - Dedup difuso del catálogo (variantes con tipeos: "Red label." vs "Red Label" — pg_trgm)
+  - Dedup difuso del catálogo: la dedup exacta (migración 011/012) no atrapa variantes con tipeo/puntuación/sufijos ("Red label." vs "Red Label", "Corona Extra" vs "Corona Extra 355ml"). Confirmado con datos reales: agrupando por nombre normalizado hay ~209 filas de más en destilados, ~159 en vinos, ~141 en cervezas — afecta a los tres tipos, pero se nota más en beer/destilados (Open Food Facts) por lo ruidoso de esos datos vs. Vivino. Necesita similarity/pg_trgm, no un índice exacto.
+  - Al agregar una bebida que no se auto-detecta (manual), permitir subir una foto de etiqueta (opcional)
+  - Toggle día/noche
+  - Selector de idioma ES/EN
+  - Restyle del modal "Gestionar" (stepper de cantidad por ubicación) — pendiente, explicado y a la espera de luz verde
   - Filtros avanzados en la colección, alertas de stock bajo, estadísticas, exportar CSV, escaneo de etiquetas, ocasión de consumo
 
 Ver `PLAN.md` para arquitectura completa, modelo de datos y decisiones de diseño.
@@ -74,12 +84,19 @@ npm run dev             # http://localhost:3001
 
 ## Próximos pasos (Fase 5 – Pulido)
 
-- Filtros avanzados y búsqueda en la colección
-- Alertas de stock bajo ("solo te queda 1 botella")
-- Estadísticas: valor total de la colección, botellas por tipo, consumo mensual
-- Exportar colección a CSV
-- Escanear etiqueta con cámara del celu
-- Registrar ocasión al consumir ("con quién", "para qué")
+Ver checklist detallado arriba en "Estado actual". Resumen priorizado:
+
+1. Dedup difuso del catálogo (pg_trgm) — bug confirmado, afecta a los 3 tipos
+2. Ubicación + cantidad al agregar una bebida ✅ (ya implementado)
+3. Pantalla "Actividad" ✅ (ya implementado)
+4. Foto de etiqueta opcional al agregar manualmente
+5. Toggle día/noche, selector de idioma ES/EN
+6. Restyle del modal "Gestionar"
+7. Filtros avanzados en la colección, alertas de stock bajo, estadísticas, exportar CSV, escaneo de etiquetas, ocasión de consumo
+
+Nota: el precio de la botella está fuera de alcance por decisión explícita — no
+implementar en ningún punto de esta lista. Valuación de colección (si se hace)
+va sin precio: cantidad por tipo/variedad, por país de origen, etc.
 
 ## Notas del catálogo
 
@@ -89,4 +106,5 @@ npm run dev             # http://localhost:3001
 - OFF bulk: usar `search.openfoodfacts.org` (no `cgi/search.pl`, da 503).
   Tags de categoría reales: `en:hard-liquors`, `en:whisky` (singular), `en:beers`, `en:wines`.
 - Dedup del catálogo por (nombre, productor, tipo, añada) con índice único
-  parcial para OFF (migración 011/012).
+  parcial para OFF (migración 011/012). Es dedup EXACTO (case/trim-insensitive),
+  no atrapa variantes con tipeo o sufijos distintos — ver Fase 5.

@@ -1,9 +1,8 @@
 import { useState, useEffect, useCallback } from 'react'
-import Layout from '../components/Layout'
-import LocationForm from '../components/LocationForm'
+import LocationForm from './LocationForm'
 import { api } from '../services/api'
 
-export default function Locations() {
+export default function LocationsPanel() {
   const [locations,  setLocations]  = useState([])
   const [loading,    setLoading]    = useState(true)
   const [error,      setError]      = useState('')
@@ -58,69 +57,67 @@ export default function Locations() {
   const closeForm = () => { setShowForm(false); setEditing(null) }
 
   return (
-    <Layout title="Ubicaciones">
-      <div className="max-w-2xl px-4 md:px-8 py-6">
+    <div className="px-4 md:px-8 py-6">
 
-        {loading && (
-          <div className="flex justify-center py-16">
-            <div className="w-6 h-6 border-2 border-zinc-700 border-t-zinc-400 rounded-full animate-spin" />
-          </div>
-        )}
+      {loading && (
+        <div className="flex justify-center py-16">
+          <div className="w-6 h-6 border-2 border-border border-t-gold rounded-full animate-spin" />
+        </div>
+      )}
 
-        {error && <p className="text-sm text-red-400 py-8 text-center">{error}</p>}
+      {error && <p className="text-sm text-red-400 py-8 text-center">{error}</p>}
 
-        {!loading && !error && (
-          <>
-            {locations.length === 0 ? (
-              <div className="text-center py-20">
-                <p className="text-zinc-400 font-medium mb-1">Sin ubicaciones</p>
-                <p className="text-sm text-zinc-600">Creá una para organizar tu colección</p>
-              </div>
-            ) : (
-              <div className="space-y-2">
-                {locations.map((loc) => (
-                  <div
-                    key={loc.id}
-                    className="bg-zinc-900 rounded-xl px-4 py-3.5 flex items-center gap-3"
-                  >
-                    <div className="w-10 h-10 rounded-lg bg-zinc-800 flex items-center justify-center shrink-0 text-zinc-400">
-                      <LocationIcon />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="font-medium text-zinc-100">{loc.name}</p>
-                      {loc.description && (
-                        <p className="text-sm text-zinc-500 truncate">{loc.description}</p>
-                      )}
-                    </div>
-                    <div className="shrink-0 text-right">
-                      <p className="text-lg font-semibold text-zinc-100">{loc.total_bottles}<span className="text-xs text-zinc-600 ml-1">u.</span></p>
-                    </div>
-                    <div className="flex gap-1 shrink-0">
-                      <button
-                        onClick={() => openEdit(loc)}
-                        className="p-2 text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800 rounded-lg transition-colors"
-                      >
-                        <EditIcon />
-                      </button>
-                      <button
-                        onClick={() => setConfirmDel(loc)}
-                        className="p-2 text-zinc-500 hover:text-red-400 hover:bg-zinc-800 rounded-lg transition-colors"
-                      >
-                        <TrashIcon />
-                      </button>
-                    </div>
+      {!loading && !error && (
+        <>
+          {locations.length === 0 ? (
+            <div className="text-center py-20">
+              <p className="text-ink-soft font-medium mb-1">Sin ubicaciones</p>
+              <p className="text-sm text-muted">Creá una para organizar tu colección</p>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {locations.map((loc) => (
+                <div
+                  key={loc.id}
+                  className="card px-4 py-3.5 flex items-center gap-3"
+                >
+                  <div className="w-10 h-10 rounded-lg bg-chip flex items-center justify-center shrink-0 text-gold">
+                    <LocationIcon />
                   </div>
-                ))}
-              </div>
-            )}
-          </>
-        )}
-      </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-medium text-ink">{loc.name}</p>
+                    {loc.description && (
+                      <p className="text-sm text-muted truncate">{loc.description}</p>
+                    )}
+                  </div>
+                  <div className="shrink-0 text-right">
+                    <p className="font-serif text-gold">{loc.total_bottles}<span className="text-xs text-muted font-sans ml-1">u.</span></p>
+                  </div>
+                  <div className="flex gap-1 shrink-0">
+                    <button
+                      onClick={() => openEdit(loc)}
+                      className="p-2 text-muted hover:text-ink-soft hover:bg-chip rounded-lg transition-colors"
+                    >
+                      <EditIcon />
+                    </button>
+                    <button
+                      onClick={() => setConfirmDel(loc)}
+                      className="p-2 text-muted hover:text-red-400 hover:bg-chip rounded-lg transition-colors"
+                    >
+                      <TrashIcon />
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </>
+      )}
 
       {/* FAB */}
       <button
         onClick={() => setShowForm(true)}
-        className="fixed bottom-20 right-4 md:bottom-8 md:right-8 w-14 h-14 bg-zinc-100 text-zinc-900 rounded-full shadow-lg flex items-center justify-center text-2xl font-light hover:bg-white transition-colors z-20"
+        className="fixed bottom-20 right-4 md:bottom-8 md:right-8 w-14 h-14 bg-gold text-[#402d00] rounded-full shadow-lg flex items-center justify-center text-2xl font-light hover:bg-gold-hover transition-colors z-20"
         aria-label="Nueva ubicación"
       >
         +
@@ -138,17 +135,17 @@ export default function Locations() {
       {confirmDel && (
         <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
           <div className="absolute inset-0 bg-black/60" onClick={() => setConfirmDel(null)} />
-          <div className="relative bg-zinc-900 rounded-2xl p-6 w-full max-w-sm">
-            <h3 className="font-semibold text-zinc-100 mb-2">¿Eliminar "{confirmDel.name}"?</h3>
-            <p className="text-sm text-zinc-500 mb-5">Las bebidas en esta ubicación quedarán sin asignar.</p>
+          <div className="relative bg-surface border-t border-t-gold/15 rounded-2xl p-6 w-full max-w-sm">
+            <h3 className="font-serif text-gold text-lg mb-2">¿Eliminar "{confirmDel.name}"?</h3>
+            <p className="text-sm text-ink-soft mb-5">Las bebidas en esta ubicación quedarán sin asignar.</p>
             <div className="flex gap-3">
-              <button onClick={() => setConfirmDel(null)} className="flex-1 bg-zinc-800 text-zinc-300 rounded-lg py-2.5 text-sm hover:bg-zinc-700 transition-colors">Cancelar</button>
+              <button onClick={() => setConfirmDel(null)} className="flex-1 bg-chip text-ink-soft rounded-lg py-2.5 text-sm hover:text-ink transition-colors">Cancelar</button>
               <button onClick={() => handleDelete(confirmDel.id)} className="flex-1 bg-red-900 text-red-200 rounded-lg py-2.5 text-sm hover:bg-red-800 transition-colors">Eliminar</button>
             </div>
           </div>
         </div>
       )}
-    </Layout>
+    </div>
   )
 }
 

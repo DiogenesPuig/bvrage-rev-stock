@@ -1,5 +1,38 @@
 @import "tailwindcss";
 
+@theme {
+  --font-serif: 'Libre Caslon Text', serif;
+  --font-sans: 'Hanken Grotesk', ui-sans-serif, system-ui, sans-serif;
+
+  --color-canvas: #131313;
+  --color-canvas-deep: #0e0e0e;
+  --color-surface: #1c1b1b;
+  --color-surface-soft: rgb(32 31 31 / 0.6);
+  --color-header: rgb(19 19 19 / 0.85);
+  --color-chip: rgb(53 53 52 / 0.3);
+
+  --color-border: #4d4639;
+  --color-border-soft: rgb(255 255 255 / 0.08);
+
+  --color-ink: #e5e2e1;
+  --color-ink-soft: #d1c5b4;
+  --color-muted: #998f80;
+
+  --color-gold: #ffdea1;
+  --color-gold-hover: #ffb67b;
+  --color-burgundy: #7e2e34;
+}
+
+@layer base {
+  body {
+    @apply bg-canvas text-ink font-sans;
+  }
+  h1, h2, h3 {
+    font-family: var(--font-serif);
+    font-weight: 400;
+  }
+}
+
 @layer utilities {
   .no-scrollbar::-webkit-scrollbar { display: none; }
   .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
@@ -7,6 +40,26 @@
 
 @layer components {
   .field {
-    @apply w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-zinc-100 placeholder-zinc-600 text-sm focus:outline-none focus:border-zinc-500 transition-colors;
+    @apply w-full bg-surface border border-border rounded-lg px-3 py-2 text-ink placeholder-muted text-sm focus:outline-none focus:border-gold transition-colors;
+  }
+
+  .field-underline {
+    @apply w-full bg-transparent border-0 border-b border-border text-ink placeholder-muted text-sm py-2 focus:outline-none focus:border-gold transition-colors;
+  }
+
+  .label-caps {
+    @apply text-[11px] tracking-widest text-ink-soft uppercase;
+  }
+
+  .btn-primary {
+    @apply w-full bg-gold text-[#402d00] text-xs uppercase tracking-widest font-medium py-3.5 hover:bg-gold-hover transition-colors disabled:opacity-50;
+  }
+
+  .btn-outline {
+    @apply w-full bg-transparent border border-gold text-gold text-xs uppercase tracking-widest font-medium py-3.5 hover:bg-gold/10 transition-colors disabled:opacity-50;
+  }
+
+  .card {
+    @apply bg-surface border border-border-soft rounded-lg;
   }
 }

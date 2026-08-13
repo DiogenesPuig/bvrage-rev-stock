@@ -6,9 +6,8 @@ import Login from './pages/Login'
 import Register from './pages/Register'
 import Collection from './pages/Collection'
 import BeverageDetail from './pages/BeverageDetail'
-import Locations from './pages/Locations'
-import Community from './pages/Community'
-import Search from './pages/Search'
+import CatalogDetail from './pages/CatalogDetail'
+import Activity from './pages/Activity'
 
 function App() {
   return (
@@ -20,9 +19,11 @@ function App() {
           <Route path="/register"      element={<Register />} />
           <Route path="/collection"    element={<ProtectedRoute><Collection /></ProtectedRoute>} />
           <Route path="/beverages/:id" element={<ProtectedRoute><BeverageDetail /></ProtectedRoute>} />
-          <Route path="/locations"     element={<ProtectedRoute><Locations /></ProtectedRoute>} />
-          <Route path="/community"     element={<ProtectedRoute><Community /></ProtectedRoute>} />
-          <Route path="/search"        element={<ProtectedRoute><Search /></ProtectedRoute>} />
+          <Route path="/catalog/:id"   element={<ProtectedRoute><CatalogDetail /></ProtectedRoute>} />
+          <Route path="/activity"      element={<ProtectedRoute><Activity /></ProtectedRoute>} />
+          <Route path="/locations"     element={<Navigate to="/collection" replace />} />
+          <Route path="/community"     element={<Navigate to="/" replace />} />
+          <Route path="/search"        element={<Navigate to="/" replace />} />
           <Route path="*"              element={<Navigate to="/" replace />} />
         </Routes>
       </AuthProvider>
