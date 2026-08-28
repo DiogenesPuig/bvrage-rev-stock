@@ -34,12 +34,15 @@ App para gestionar una colección personal de bebidas alcohólicas. Multi-usuari
   (no solo por bebida), agrupado por fecha (Hoy/Ayer/fecha), con filtro por tipo
   (Compra/Consumo/Transferencia) e infinite scroll. Backend: `GET /api/movements`
   (nuevo, en `movements.js`) con paginación y filtro `type`.
+- [x] **Modal "Gestionar"** — ManageStockModal.jsx, accesible desde "GESTIONAR" en el
+  detalle de una bebida. Stepper +/- por ubicación para ajustar stock de a una
+  botella sin pasar por el formulario completo de movimiento; permite agregar
+  stock en una ubicación nueva sin salir del modal. Reutiliza `POST /movements`.
 - [ ] **Fase 5 – Pulido** ← PRÓXIMO PASO
   - Dedup difuso del catálogo: la dedup exacta (migración 011/012) no atrapa variantes con tipeo/puntuación/sufijos ("Red label." vs "Red Label", "Corona Extra" vs "Corona Extra 355ml"). Confirmado con datos reales: agrupando por nombre normalizado hay ~209 filas de más en destilados, ~159 en vinos, ~141 en cervezas — afecta a los tres tipos, pero se nota más en beer/destilados (Open Food Facts) por lo ruidoso de esos datos vs. Vivino. Necesita similarity/pg_trgm, no un índice exacto.
   - Al agregar una bebida que no se auto-detecta (manual), permitir subir una foto de etiqueta (opcional)
   - Toggle día/noche
   - Selector de idioma ES/EN
-  - Restyle del modal "Gestionar" (stepper de cantidad por ubicación) — pendiente, explicado y a la espera de luz verde
   - Filtros avanzados en la colección, alertas de stock bajo, estadísticas, exportar CSV, escaneo de etiquetas, ocasión de consumo
 
 Ver `PLAN.md` para arquitectura completa, modelo de datos y decisiones de diseño.
@@ -89,9 +92,9 @@ Ver checklist detallado arriba en "Estado actual". Resumen priorizado:
 1. Dedup difuso del catálogo (pg_trgm) — bug confirmado, afecta a los 3 tipos
 2. Ubicación + cantidad al agregar una bebida ✅ (ya implementado)
 3. Pantalla "Actividad" ✅ (ya implementado)
-4. Foto de etiqueta opcional al agregar manualmente
-5. Toggle día/noche, selector de idioma ES/EN
-6. Restyle del modal "Gestionar"
+4. Modal "Gestionar" ✅ (ya implementado)
+5. Foto de etiqueta opcional al agregar manualmente
+6. Toggle día/noche, selector de idioma ES/EN
 7. Filtros avanzados en la colección, alertas de stock bajo, estadísticas, exportar CSV, escaneo de etiquetas, ocasión de consumo
 
 Nota: el precio de la botella está fuera de alcance por decisión explícita — no

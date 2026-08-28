@@ -4,6 +4,7 @@ import Layout from '../components/Layout'
 import BeverageIcon from '../components/BeverageIcon'
 import BeverageForm from '../components/BeverageForm'
 import MovementForm from '../components/MovementForm'
+import ManageStockModal from '../components/ManageStockModal'
 import ReviewForm from '../components/ReviewForm'
 import { api } from '../services/api'
 
@@ -26,6 +27,7 @@ export default function BeverageDetail() {
   const [error,      setError]      = useState('')
   const [showEdit,   setShowEdit]   = useState(false)
   const [showMove,   setShowMove]   = useState(false)
+  const [showManage, setShowManage] = useState(false)
   const [showReview, setShowReview] = useState(false)
   const [saving,     setSaving]     = useState(false)
   const [confirmDel, setConfirmDel] = useState(false)
@@ -161,7 +163,12 @@ export default function BeverageDetail() {
 
             {/* Stock por ubicación */}
             <section className="mb-6">
-              <h2 className="label-caps mb-3">Stock</h2>
+              <div className="flex items-center justify-between mb-3">
+                <h2 className="label-caps">Stock</h2>
+                <button onClick={() => setShowManage(true)} className="text-xs tracking-widest text-gold hover:text-gold-hover transition-colors">
+                  GESTIONAR
+                </button>
+              </div>
               <div className="card overflow-hidden">
                 {beverage.stock_by_location?.filter(s => s.quantity > 0).length === 0 ? (
                   <p className="px-4 py-3 text-sm text-muted">Sin stock</p>
@@ -308,6 +315,17 @@ export default function BeverageDetail() {
           onSave={handleMovement}
           onClose={() => setShowMove(false)}
           loading={saving}
+        />
+      )}
+
+      {/* Modal gestionar stock */}
+      {showManage && beverage && (
+        <ManageStockModal
+          beverageId={id}
+          beverageName={beverage.name}
+          stockByLocation={beverage.stock_by_location ?? []}
+          onClose={() => setShowManage(false)}
+          onSaved={fetchData}
         />
       )}
 
